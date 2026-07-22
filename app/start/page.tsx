@@ -1,6 +1,4 @@
-import { Shell } from "@/components/Shell";
 import { IntakeRenderer } from "@/components/intake/IntakeRenderer";
-import { getActiveBrand } from "@/lib/brand";
 
 /**
  * Intake host page. Forwards the incoming entry-context query verbatim to the
@@ -19,21 +17,14 @@ export default async function StartPage({
   }
   const qs = usp.toString();
   const initialQuery = qs ? `?${qs}` : "";
-  const brand = getActiveBrand();
 
+  // The intake is a single-mouth surface with its OWN chrome (progress bar + Back +
+  // escape hatch, per INTAKE-SKIN-01) — it renders on the skin canvas, not the site
+  // Shell. One question at a time, in the server's order; this template renders, it
+  // does not decide.
   return (
-    <Shell brand={brand} stripped>
-      <section className="section">
-        <div className="container" style={{ maxWidth: 640 }}>
-          <div className="eyebrow">Intake</div>
-          <h1 style={{ marginTop: 4 }}>Let&rsquo;s get started</h1>
-          <p className="muted">
-            This questionnaire is served by the Purple intake API. One question at a time, in the
-            server&rsquo;s order — this template renders, it does not decide.
-          </p>
-          <IntakeRenderer initialQuery={initialQuery} />
-        </div>
-      </section>
-    </Shell>
+    <div className="pl-app">
+      <IntakeRenderer initialQuery={initialQuery} />
+    </div>
   );
 }

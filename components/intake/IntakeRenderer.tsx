@@ -1,28 +1,40 @@
 "use client";
 
 /**
- * Headless intake renderer — the drop-in component (Scope 2).
+ * Headless intake renderer — the drop-in component, skinned to INTAKE-SKIN-01 (WI-043).
  *
- * Drives the server-authoritative resolve→next loop through the same-origin BFF:
- *   • one node per screen; the server owns sequence, options, and completion
- *   • exclusive-option semantics (server rejects; we surface the 422 issue)
- *   • a prefilled value ALWAYS renders a confirm step — never silently accepted
- *   • file capture via an opaque upload reference (no bytes inlined)
- *   • address typeahead against /instrument/address/suggest
- *   • abandon on drop-off
- *   • progress from SERVER signals only (status + section_id) — never a fabricated %
+ * The server-authoritative loop is UNCHANGED (INT-A-04): resolve→next→complete through
+ * the same-origin BFF, presentation metadata + abandon hook + server-supplied progress
+ * exactly as shipped. Only the PRESENTATION/behavior layer is the skin:
+ *   • one question per screen, canvas-vs-card depth, centered headline
+ *   • single-select cards: click → highlight → 220ms confirm dwell → auto-advance
+ *     (input locked during dwell); number keys 1–9 select
+ *   • multi-select cards: right-edge accent check; STRUCTURAL exclusive semantics when
+ *     the ratified `option.exclusive` flag is present (clear siblings both directions,
+ *     no error copy); when the flag is absent the server's 422 drives a SILENT degraded
+ *     resolution (most-recent wins, one auto-resubmit, no banner) — WI-043 Δ1
+ *   • sticky Continue with visible gating; thin server-fraction progress bar; Back
+ *     (client history over visited steps — the contract is forward-only); escape hatch
+ *   • 240ms slide-in, `prefers-reduced-motion` ⇒ instant (dwell + slide drop to 0)
  *
- * The client decides nothing clinical: it renders what the server returns and
- * submits answers back. Swapping the API base URL (mock ↔ live) changes nothing here.
+ * Exclusivity is a DATA flag, never inferred from label text (INT-A-07). The client
+ * decides nothing clinical: it renders what the server returns and submits answers back.
  */
 
+import {
+  isContinueEnabled,
+  numberKeyIndex,
+  optionsOf,
+  resolveExclusive422,
+  toggleMulti,
+} from "@/lib/intake/logic.mjs";
 import type {
   AddressSuggestion,
   AnswerValue,
   InstrumentStep,
   RenderedNode,
 } from "@/lib/purple/types";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type Draft = {
   codes: string[];
@@ -35,13 +47,47 @@ type Draft = {
 };
 
 const EMPTY_DRAFT: Draft = { codes: [], value: "", pairLo: "", pairHi: "" };
+const EXCLUSIVE_ISSUE = "exclusive_option_violation";
+
+function seedDraft(node?: RenderedNode | null): Draft {
+  return {
+    ...EMPTY_DRAFT,
+    value:
+      node?.prefill === "confirm" && node.prefilled_value != null
+        ? String(node.prefilled_value)
+        : "",
+  };
+}
+
+type Visited = { step: InstrumentStep; draft: Draft };
 
 export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
-  const [step, setStep] = useState<InstrumentStep | null>(null);
-  const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
+  const [visited, setVisited] = useState<Visited[]>([]);
+  const [pos, setPos] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sessionRef = useRef<string | null>(null);
+  const leftKeyRef = useRef<string[]>([]); // answer key used to advance FROM visited[i]
+  const lastToggledRef = useRef<string | undefined>(undefined);
+  const reducedRef = useRef(false);
+
+  useEffect(() => {
+    reducedRef.current =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+  }, []);
+
+  const current = visited[pos] ?? null;
+  const step = current?.step ?? null;
+  const draft = current?.draft ?? EMPTY_DRAFT;
+  const node = step?.node ?? null;
+
+  const setDraft = useCallback(
+    (d: Draft) => {
+      setVisited((v) => v.map((entry, i) => (i === pos ? { ...entry, draft: d } : entry)));
+    },
+    [pos],
+  );
 
   const loadFirst = useCallback(async () => {
     setBusy(true);
@@ -52,7 +98,9 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
       });
       const data = (await res.json()) as InstrumentStep;
       sessionRef.current = data.session_id;
-      setStep(data);
+      leftKeyRef.current = [];
+      setVisited([{ step: data, draft: seedDraft(data.node) }]);
+      setPos(0);
     } catch {
       setError("Could not start the intake. Check your API configuration.");
     } finally {
@@ -63,20 +111,6 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
   useEffect(() => {
     loadFirst();
   }, [loadFirst]);
-
-  // Reset the per-node draft whenever the node changes; seed the confirm step with
-  // the server-supplied prefilled value so the patient confirms it explicitly.
-  const node = step?.node;
-  useEffect(() => {
-    if (!node) return;
-    setDraft({
-      ...EMPTY_DRAFT,
-      value:
-        node.prefill === "confirm" && node.prefilled_value != null
-          ? String(node.prefilled_value)
-          : "",
-    });
-  }, [node]);
 
   // Best-effort abandon beacon if the patient leaves mid-flow.
   useEffect(() => {
@@ -91,94 +125,323 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
     };
   }, [step]);
 
-  async function submit(answer?: AnswerValue) {
+  const callNext = useCallback(async (answer?: AnswerValue): Promise<InstrumentStep | null> => {
     const sid = sessionRef.current;
-    if (!sid) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/purple/instrument/next", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sid, answer }),
-      });
-      const data = (await res.json()) as InstrumentStep;
-      setStep(data);
-    } catch {
-      setError("Could not submit your answer. Please try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
+    if (!sid) return null;
+    const res = await fetch("/api/purple/instrument/next", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sid, answer }),
+    });
+    return (await res.json()) as InstrumentStep;
+  }, []);
 
+  const advanceServer = useCallback(
+    async (answer: AnswerValue | undefined, answerKey: string) => {
+      setBusy(true);
+      setError(null);
+      try {
+        let data = await callNext(answer);
+        // Silent degraded resolution (WI-043 Δ1): a 422 exclusivity rejection with no
+        // client-side flag ⇒ most-recent wins, ONE auto-resubmit, NEVER an error nag.
+        if (
+          data &&
+          data.status === "active" &&
+          data.issues?.some((i) => i.code === EXCLUSIVE_ISSUE)
+        ) {
+          const collapsed = resolveExclusive422(lastToggledRef.current);
+          data = await callNext({ codes: collapsed });
+        }
+        if (!data) return;
+        // Drop any exclusivity issue from view — it is never surfaced as copy.
+        const visibleIssues = (data.issues ?? []).filter((i) => i.code !== EXCLUSIVE_ISSUE);
+        const shownStep: InstrumentStep =
+          visibleIssues.length === data.issues?.length ? data : { ...data, issues: visibleIssues };
+        setVisited((v) => {
+          const next = v.slice(0, pos + 1);
+          next.push({ step: shownStep, draft: seedDraft(shownStep.node) });
+          return next;
+        });
+        leftKeyRef.current[pos] = answerKey;
+        setPos((p) => p + 1);
+      } catch {
+        setError("Could not submit your answer. Please try again.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [callNext, pos],
+  );
+
+  const advance = useCallback(
+    (answer?: AnswerValue) => {
+      const answerKey = JSON.stringify(answer ?? null);
+      // Replay a cached forward step when the answer is unchanged (Back→Next with no edit),
+      // so the forward-only server contract is never double-advanced.
+      if (pos < visited.length - 1 && leftKeyRef.current[pos] === answerKey) {
+        setPos((p) => p + 1);
+        return;
+      }
+      void advanceServer(answer, answerKey);
+    },
+    [advanceServer, pos, visited.length],
+  );
+
+  const back = useCallback(() => {
+    setError(null);
+    setPos((p) => (p > 0 ? p - 1 : p));
+  }, []);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   if (error) {
     return (
-      <div className="card">
-        <p>{error}</p>
-        <button type="button" className="btn" onClick={loadFirst}>
-          Retry
-        </button>
-      </div>
-    );
-  }
-  if (!step) return <div className="card">Starting…</div>;
-
-  if (step.status === "complete") {
-    return <CompleteView step={step} />;
-  }
-  if (step.status === "abandoned") {
-    return (
-      <div className="card">
-        <p>This session was marked abandoned. You can start again.</p>
-        <button type="button" className="btn" onClick={loadFirst}>
-          Start over
-        </button>
-      </div>
-    );
-  }
-
-  if (!node) return <div className="card">Loading next step…</div>;
-
-  return (
-    <div>
-      <ProgressLine node={node} />
-      <div className="card" style={{ marginTop: 12 }}>
-        {node.copy ? <p style={{ marginTop: 0 }}>{node.copy}</p> : null}
-        <NodeControl node={node} draft={draft} setDraft={setDraft} />
-        {step.issues?.length ? (
-          <ul style={{ color: "#b00", fontSize: 14 }}>
-            {step.issues.map((i) => (
-              <li key={i.code}>{i.message}</li>
-            ))}
-          </ul>
-        ) : null}
-        <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-          <button
-            type="button"
-            className="btn"
-            disabled={busy}
-            onClick={() => submit(buildAnswer(node, draft))}
-          >
-            {node.kind === "display" ? "Continue" : "Next"}
+      <div className="pl-stage">
+        <div className="pl-card" style={{ cursor: "default" }}>
+          <span>{error}</span>
+        </div>
+        <div className="pl-footer">
+          <button type="button" className="pl-continue" onClick={loadFirst}>
+            Retry
           </button>
-          {node.prefill === "confirm" ? (
-            <span className="muted" style={{ fontSize: 12, alignSelf: "center" }}>
-              Prefilled from your link — confirm or edit before continuing.
-            </span>
-          ) : null}
         </div>
       </div>
-    </div>
+    );
+  }
+  if (!step) return <div className="pl-stage">Starting…</div>;
+
+  const complete = step.status === "complete";
+  const abandoned = step.status === "abandoned";
+  const pct = complete ? 100 : Math.round((node?.progress ?? 0) * 100);
+  const canBack = pos > 0 && !complete && !abandoned;
+
+  return (
+    <>
+      <div className="pl-chrome">
+        <div className="pl-bar">
+          <i style={{ width: `${pct}%` }} />
+        </div>
+        <div className="pl-nav">
+          <button
+            type="button"
+            className="pl-back"
+            onClick={back}
+            disabled={!canBack}
+            aria-label="Previous question"
+          >
+            ← Back
+          </button>
+          <a className="pl-help" href="/contact">
+            Contact us
+          </a>
+        </div>
+      </div>
+
+      <main className="pl-stage">
+        <div className="pl-node" key={`${step.session_id}-${pos}`} aria-live="polite">
+          {complete ? (
+            <CompleteView step={step} />
+          ) : abandoned ? (
+            <>
+              <h1 className="pl-headline">This session was marked abandoned.</h1>
+              <div className="pl-footer">
+                <button type="button" className="pl-continue" onClick={loadFirst}>
+                  Start over
+                </button>
+              </div>
+            </>
+          ) : node ? (
+            <NodeView
+              node={node}
+              draft={draft}
+              setDraft={setDraft}
+              busy={busy}
+              reduced={reducedRef}
+              lastToggled={lastToggledRef}
+              onAdvance={advance}
+            />
+          ) : (
+            <h1 className="pl-headline">Loading…</h1>
+          )}
+        </div>
+      </main>
+    </>
   );
 }
 
-/** Progress rendered from server signals ONLY — status + section, never a fake %. */
-function ProgressLine({ node }: { node: RenderedNode }) {
+function NodeView({
+  node,
+  draft,
+  setDraft,
+  busy,
+  reduced,
+  lastToggled,
+  onAdvance,
+}: {
+  node: RenderedNode;
+  draft: Draft;
+  setDraft: (d: Draft) => void;
+  busy: boolean;
+  reduced: React.RefObject<boolean>;
+  lastToggled: React.RefObject<string | undefined>;
+  onAdvance: (a?: AnswerValue) => void;
+}) {
+  const [locked, setLocked] = useState(false);
+  const options = useMemo(() => optionsOf(node), [node]);
+  const isSingle = node.control === "single_select";
+  const isMulti = node.control === "multi_select";
+  const isDisplay = node.kind === "display" || !node.control;
+
+  // single-select: tap → highlight → confirm dwell → auto-advance (input locked).
+  function pickSingle(code: string) {
+    if (locked) return;
+    setDraft({ ...draft, codes: [code] });
+    setLocked(true);
+    const dwell = reduced.current ? 0 : 340; // 220ms dwell + 120ms grace
+    window.setTimeout(() => onAdvance({ codes: [code] }), dwell);
+  }
+
+  function toggle(code: string) {
+    lastToggled.current = code;
+    setDraft({ ...draft, codes: toggleMulti(draft.codes, node, code) });
+  }
+
+  const footerEnabled = isMulti
+    ? isContinueEnabled(node, draft.codes.length)
+    : controlHasValue(node, draft);
+
   return (
-    <div className="eyebrow" aria-live="polite">
-      Section: {node.section_id.replace(/^sec_/, "").replace(/_/g, " ")}
-    </div>
+    <>
+      <h1 className="pl-headline">{headlineOf(node)}</h1>
+
+      {isSingle || isMulti ? (
+        <div
+          className="pl-options"
+          role={isMulti ? "group" : "radiogroup"}
+          aria-label={headlineOf(node)}
+        >
+          {options.map((opt, i) => {
+            const checked = draft.codes.includes(opt.code);
+            return (
+              <button
+                type="button"
+                key={opt.code}
+                className="pl-card"
+                data-code={opt.code}
+                role={isMulti ? "checkbox" : "radio"}
+                aria-checked={checked}
+                disabled={locked}
+                onClick={() => (isMulti ? toggle(opt.code) : pickSingle(opt.code))}
+              >
+                <span>
+                  {opt.label ?? opt.code}
+                  {opt.sub ? <span className="pl-sub">{opt.sub}</span> : null}
+                </span>
+                {isMulti ? (
+                  <span className="pl-check" aria-hidden="true">
+                    <svg viewBox="0 0 16 16">
+                      <title>selected</title>
+                      <path d="M2.5 8.5l3.5 3.5 7-8" />
+                    </svg>
+                  </span>
+                ) : (
+                  <span className="pl-kbd" aria-hidden="true">
+                    {i + 1}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ) : isDisplay ? (
+        <p className="pl-why">{node.copy}</p>
+      ) : (
+        <div className="pl-options">
+          <FormControl node={node} draft={draft} setDraft={setDraft} />
+        </div>
+      )}
+
+      {node.prefill === "confirm" ? (
+        <p className="pl-why" style={{ fontSize: 13 }}>
+          Prefilled from your link — confirm or edit before continuing.
+        </p>
+      ) : null}
+
+      {/* Number-key select for card questions (hidden chip on touch, per CSS). */}
+      {isSingle || isMulti ? (
+        <KeyboardSelect
+          count={options.length}
+          onSelect={(i) => (isMulti ? toggle(options[i].code) : pickSingle(options[i].code))}
+          canContinue={isMulti && footerEnabled}
+          onContinue={() => onAdvance({ codes: draft.codes })}
+        />
+      ) : null}
+
+      {/* Sticky Continue — shown for everything EXCEPT single-select (which auto-advances). */}
+      {!isSingle ? (
+        <div className="pl-footer">
+          <button
+            type="button"
+            className="pl-continue"
+            disabled={busy || !footerEnabled}
+            onClick={() => onAdvance(isDisplay ? undefined : buildAnswer(node, draft))}
+          >
+            {isDisplay ? "Continue" : "Next"}
+          </button>
+        </div>
+      ) : null}
+    </>
   );
+}
+
+/** Attaches number-key selection + Enter-to-continue while a card question is mounted. */
+function KeyboardSelect({
+  count,
+  onSelect,
+  canContinue,
+  onContinue,
+}: {
+  count: number;
+  onSelect: (index: number) => void;
+  canContinue: boolean;
+  onContinue: () => void;
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const idx = numberKeyIndex(e.key, count);
+      if (idx >= 0) {
+        e.preventDefault();
+        onSelect(idx);
+      } else if (e.key === "Enter" && canContinue) {
+        e.preventDefault();
+        onContinue();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [count, onSelect, canContinue, onContinue]);
+  return null;
+}
+
+function headlineOf(node: RenderedNode): string {
+  return node.copy ?? node.node_id;
+}
+
+function controlHasValue(node: RenderedNode, draft: Draft): boolean {
+  if (!node.required) return true;
+  switch (node.control) {
+    case "number_pair":
+      return draft.pairLo.trim() !== "" && draft.pairHi.trim() !== "";
+    case "text":
+      return draft.value.trim() !== "";
+    case "email":
+      return /.+@.+\..+/.test(draft.value.trim());
+    case "address":
+      return !!draft.addressSuggestionId;
+    case "file":
+      return !!draft.uploadRef;
+    default:
+      return true;
+  }
 }
 
 function buildAnswer(node: RenderedNode, draft: Draft): AnswerValue | undefined {
@@ -195,7 +458,6 @@ function buildAnswer(node: RenderedNode, draft: Draft): AnswerValue | undefined 
     case "text":
       return { value: draft.value };
     case "email":
-      // A confirm step records an explicit patient action, never silent acceptance.
       return { value: draft.value, confirmed: node.prefill === "confirm" ? true : undefined };
     case "address":
       return draft.addressSuggestionId
@@ -206,11 +468,11 @@ function buildAnswer(node: RenderedNode, draft: Draft): AnswerValue | undefined 
         ? { media: { upload_ref: draft.uploadRef, content_type: "image/png" } }
         : {};
     default:
-      return undefined; // display nodes advance with no answer
+      return undefined;
   }
 }
 
-function NodeControl({
+function FormControl({
   node,
   draft,
   setDraft,
@@ -219,56 +481,19 @@ function NodeControl({
   draft: Draft;
   setDraft: (d: Draft) => void;
 }) {
-  const options = node.option_codes ?? [];
   switch (node.control) {
-    case "single_select":
-      return (
-        <fieldset style={{ border: "none", padding: 0 }}>
-          {options.map((code) => (
-            <label key={code} style={{ display: "block", margin: "6px 0" }}>
-              <input
-                type="radio"
-                name={node.node_id}
-                checked={draft.codes[0] === code}
-                onChange={() => setDraft({ ...draft, codes: [code] })}
-              />{" "}
-              {labelFor(code)}
-            </label>
-          ))}
-        </fieldset>
-      );
-    case "multi_select":
-      return (
-        <fieldset style={{ border: "none", padding: 0 }}>
-          {options.map((code) => (
-            <label key={code} style={{ display: "block", margin: "6px 0" }}>
-              <input
-                type="checkbox"
-                checked={draft.codes.includes(code)}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    codes: e.target.checked
-                      ? [...draft.codes, code]
-                      : draft.codes.filter((c) => c !== code),
-                  })
-                }
-              />{" "}
-              {labelFor(code)}
-            </label>
-          ))}
-        </fieldset>
-      );
     case "number_pair":
       return (
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 12 }}>
           <input
+            className="pl-field"
             type="number"
             placeholder="Low"
             value={draft.pairLo}
             onChange={(e) => setDraft({ ...draft, pairLo: e.target.value })}
           />
           <input
+            className="pl-field"
             type="number"
             placeholder="High"
             value={draft.pairHi}
@@ -279,8 +504,8 @@ function NodeControl({
     case "text":
       return (
         <textarea
+          className="pl-field"
           rows={3}
-          style={{ width: "100%" }}
           value={draft.value}
           onChange={(e) => setDraft({ ...draft, value: e.target.value })}
         />
@@ -288,8 +513,8 @@ function NodeControl({
     case "email":
       return (
         <input
+          className="pl-field"
           type="email"
-          style={{ width: "100%" }}
           value={draft.value}
           onChange={(e) => setDraft({ ...draft, value: e.target.value })}
         />
@@ -299,7 +524,7 @@ function NodeControl({
     case "file":
       return <FileControl draft={draft} setDraft={setDraft} media={node.media} />;
     default:
-      return null; // display
+      return null;
   }
 }
 
@@ -327,8 +552,8 @@ function AddressControl({ draft, setDraft }: { draft: Draft; setDraft: (d: Draft
   return (
     <div>
       <input
+        className="pl-field"
         type="text"
-        style={{ width: "100%" }}
         placeholder="Start typing an address…"
         value={draft.addressLabel ?? q}
         onChange={(e) => {
@@ -337,27 +562,11 @@ function AddressControl({ draft, setDraft }: { draft: Draft; setDraft: (d: Draft
         }}
       />
       {suggestions.length ? (
-        <ul
-          style={{
-            listStyle: "none",
-            padding: 0,
-            margin: "8px 0 0",
-            border: "1px solid var(--c-border)",
-          }}
-        >
+        <ul className="pl-suggest">
           {suggestions.map((s) => (
             <li key={s.id}>
               <button
                 type="button"
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  padding: 8,
-                  border: "none",
-                  background: "none",
-                  cursor: "pointer",
-                }}
                 onClick={() => {
                   setDraft({ ...draft, addressSuggestionId: s.id, addressLabel: s.label });
                   setSuggestions([]);
@@ -385,18 +594,16 @@ function FileControl({
   return (
     <div>
       <input
+        className="pl-field"
         type="file"
         accept={media?.accept?.join(",")}
         onChange={(e) => {
           const f = e.target.files?.[0];
-          // Placeholder upload path: a real fork uploads bytes to a short-lived
-          // pre-signed URL and submits the returned opaque reference — never inline
-          // bytes. Here we synthesize a reference so the flow is demonstrable.
           if (f) setDraft({ ...draft, uploadRef: `upl_sample_${f.name.replace(/\W+/g, "_")}` });
         }}
       />
       {draft.uploadRef ? (
-        <div className="muted" style={{ fontSize: 13 }}>
+        <div className="pl-why" style={{ fontSize: 13 }}>
           Staged upload reference: {draft.uploadRef} (placeholder)
         </div>
       ) : null}
@@ -406,30 +613,27 @@ function FileControl({
 
 function CompleteView({ step }: { step: InstrumentStep }) {
   return (
-    <div className="card">
-      <h2 style={{ marginTop: 0 }}>Intake complete (placeholder)</h2>
-      <p className="muted">
+    <>
+      <h1 className="pl-headline">Intake complete (placeholder)</h1>
+      <p className="pl-why">
         The server marked this session complete. Session <code>{step.session_id}</code>, enrollment{" "}
         <code>{step.journey_id}</code>.
       </p>
-      <p>
+      <div className="pl-footer">
+        <a
+          className="pl-continue"
+          href={`/checkout?journey_id=${encodeURIComponent(step.journey_id)}`}
+        >
+          Continue to checkout (stub)
+        </a>
+      </div>
+      <p className="pl-disclaimer">
         You can check enrollment status any time on the{" "}
         <a href={`/status?journey_id=${encodeURIComponent(step.journey_id)}`}>status page</a>.
+        {step.handoff
+          ? " Entry hand-off present (redirect/promo/test are validated server-side; never patient data)."
+          : ""}
       </p>
-      <a className="btn" href={`/checkout?journey_id=${encodeURIComponent(step.journey_id)}`}>
-        Continue to checkout (stub)
-      </a>
-      {step.handoff ? (
-        <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
-          Entry hand-off present (redirect/promo/test are validated server-side; never patient
-          data).
-        </p>
-      ) : null}
-    </div>
+    </>
   );
-}
-
-function labelFor(code: string): string {
-  // Placeholder humanizer — a live instrument supplies real option labels/copy.
-  return code.replace(/^opt_/, "").replace(/_/g, " ");
 }

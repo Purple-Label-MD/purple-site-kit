@@ -26,6 +26,16 @@ export const peer: BrandConfig = {
     fontSans: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
     radius: "18px",
     maxWidth: "1040px",
+    // Rethemes the intake skin via tokens ONLY (INTAKE-SKIN-01 §6) — the two-brand
+    // retheme proof: aurora keeps the BRAND-01 default (#6D28D9), peer diverges here.
+    intake: {
+      accent: "#b8562f",
+      accentTint: "#f6e3d6",
+      canvas: "#fbf7f4",
+      ink: "#241a17",
+      cardBorder: "#ece0d8",
+      radius: "18px",
+    },
   },
   entryMode: "prelander",
   navStripOnCampaign: true,

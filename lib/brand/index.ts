@@ -34,7 +34,27 @@ export function themeVars(theme: ThemeTokens): Record<string, string> {
     "--font-sans": theme.fontSans,
     "--radius": theme.radius,
     "--max-width": theme.maxWidth,
+    // INTAKE-SKIN-01 (--pl-*) overrides — only emit keys the brand sets; unset keys
+    // fall through to the BRAND-01 defaults in globals.css :root (WI-043).
+    ...intakeVars(theme.intake),
   };
+}
+
+/** Map optional intake-skin token overrides to their --pl-* custom properties. */
+function intakeVars(intake: ThemeTokens["intake"]): Record<string, string> {
+  if (!intake) return {};
+  const out: Record<string, string> = {};
+  if (intake.accent) out["--pl-accent"] = intake.accent;
+  if (intake.accentTint) out["--pl-accent-tint"] = intake.accentTint;
+  if (intake.canvas) out["--pl-canvas"] = intake.canvas;
+  if (intake.surface) out["--pl-surface"] = intake.surface;
+  if (intake.ink) out["--pl-ink"] = intake.ink;
+  if (intake.inkSoft) out["--pl-ink-soft"] = intake.inkSoft;
+  if (intake.cardBorder) out["--pl-card-border"] = intake.cardBorder;
+  if (intake.radius) out["--pl-radius"] = intake.radius;
+  if (intake.font) out["--pl-font"] = intake.font;
+  if (intake.headlineAlign) out["--pl-headline-align"] = intake.headlineAlign;
+  return out;
 }
 
 export type { BrandConfig };

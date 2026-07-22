@@ -9,6 +9,23 @@
 
 export type InstrumentStatus = "active" | "complete" | "abandoned";
 
+/**
+ * A rendered option in the ratified INT-A-09 presentation model: a STABLE code plus
+ * presentation metadata. `exclusive` is the both-ends hint (INT-A-09): the renderer
+ * clears siblings when it is set, and the server independently rejects an
+ * exclusive-plus-siblings submission. When the live gateway predates this shape it
+ * omits it and the renderer falls back to `option_codes` + the silent-422 path.
+ * Exclusivity is NEVER inferred from label text (INT-A-07).
+ */
+export interface RenderedOption {
+  code: string;
+  label?: string;
+  /** Optional banded sub-label (classification rides inside the option, not free text). */
+  sub?: string;
+  /** Both-ends exclusive hint — selecting this clears siblings and vice-versa. */
+  exclusive?: boolean;
+}
+
 /** RenderedNode — PRESENTATION ONLY. The client never owns sequence/controls/order. */
 export interface RenderedNode {
   node_id: string;
@@ -16,7 +33,14 @@ export interface RenderedNode {
   section_id: string;
   control?: string;
   fact?: string;
+  /** Bare stable codes — the shipped shape; the renderer humanizes labels when this is all it has. */
   option_codes?: string[];
+  /** Ratified INT-A-09 presentation model — preferred when present (carries label/sub/exclusive). */
+  options?: RenderedOption[];
+  /** Minimum selections for a multi-select (gating). Absent ⇒ the renderer uses `required` as a min=1 proxy. */
+  min_selections?: number;
+  /** Server-supplied progress fraction 0..1 (honest under branching). Absent ⇒ no fabricated %. */
+  progress?: number;
   required?: boolean;
   /** collect | suppress | confirm — a prefilled value ALWAYS renders at `confirm`. */
   prefill?: "collect" | "suppress" | "confirm";
