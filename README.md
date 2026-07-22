@@ -90,15 +90,70 @@ which attach the key server-side.
 - **Theming layer** — brands are pure config/tokens. Two demo brands (`aurora`
   generic, `peer` vertical overlay) prove a full reskin from config alone.
 
-## Two-brand theming proof
+## Two archetypes, three demo brands
+
+The kit ships **two archetypes** — **LAUNCH** (single-condition starter) and **GROWTH**
+(multi-audience storefront) — proven by **three demo brands**, all pure config/tokens:
 
 ```bash
-NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_aurora npm run build && npm start   # purple, long-scroll
-NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_peer   npm run build && npm start   # terracotta, pre-lander,
-                                                                         # + vertical overlay
+NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_aurora npm run build && npm start   # LAUNCH · purple, long-scroll
+NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_peer   npm run build && npm start   # LAUNCH · terracotta, pre-lander,
+                                                                         #          + vertical overlay
+NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_growth npm run build && npm start   # GROWTH · teal storefront,
+                                                                         #          two audiences + labs
 ```
 
-Same code, different data → two fully-themed sites.
+Same code, different data → fully-themed sites. The theming *mechanism* (tokens → CSS
+vars) is identical across all three; only the brand config changes.
+
+## GROWTH archetype (WI-042)
+
+GROWTH is the multi-line storefront an operator grows into. It **extends** LAUNCH (same
+chassis, tokens, copy-guard, cert-readiness checklist, clinician-bio slots, entry-link
+composer, intake renderer, auth trio, webhook receiver, journey-status read) and adds
+four capability deltas, all driven by **one catalog config** (`lib/catalog/`):
+
+1. **Audience as a catalog dimension.** One catalog projected through audience *lenses*.
+   A shared line renders in **both** lenses; an audience-exclusive line in **exactly one**.
+   Never two catalogs, never a cloned SKU — audience is set-membership on the offering
+   (`offering.audiences: AudienceId[]`). The projection is pure and unit-tested
+   (`npm run catalog:test`).
+2. **Entry-mode toggle** (`quiz-first | buy-first`) per brand, with a per-campaign
+   `?mode=` override. **Buy-first requires** the eligibility-honesty block beside every
+   buy control ("a licensed clinician reviews every order; not qualified = automatic full
+   refund") and routes the checkout **stub** → the intake renderer.
+3. **Supply-term selector** — a default-expanded, config-driven term ladder
+   (`offering.supplyTerms`); the merchandising surface, not a post-click reveal.
+4. **Labs product line** — marketing-complete, **fulfillment-stubbed**: gendered panel
+   ladders (basic/intermediate/advanced × audience), panel PDP grammar
+   (name → what's tested → why → sample → turnaround), individual-vs-package split, a
+   what-we-test transparency page, a how-it-works ritual, and therapy-adjacent panels
+   cross-linked as qualification on-ramps. Every labs CTA is gated like the checkout stub
+   until the labs lane (vendor + BAA) ships.
+
+### GROWTH config schema
+
+A GROWTH brand sets `archetype: "growth"` and a `growth` block. The catalog shape
+(`lib/catalog/types.ts`) — a fork swaps the data, never the shape:
+
+```ts
+brand.growth = {
+  audiences: Audience[];   // root lenses: { id, slug, label, hero*, negativeExperience,
+                           //   peerMirrorCasting, audienceMedicalContent[], imagerySlot }
+  catalog: {
+    offerings: Offering[]; // { slug, name, category, audiences: AudienceId[], featured?,
+                           //   roleLabel, placeholderMolecule, summary, whatItIs,
+                           //   howItWorks[], supplyTerms: SupplyTerm[], faq[], labsAdjacent? }
+    labPanels: LabPanel[]; // { slug, name, audiences[], tier, kind, whatsTested[], why,
+                           //   sampleType, turnaround, therapyOnRamp? }
+  };
+  funnelMode: "quiz-first" | "buy-first";   // default; a campaign overrides via ?mode=
+};
+```
+
+Routes: `/{audience}` (storefront), `/{audience}/{offering}` (condition unit),
+`/labs`, `/labs/{panel}`, `/labs/{individual,packages,what-we-test,how-it-works}`.
+Audience segments are SSG (`generateStaticParams` + `dynamicParams = false`).
 
 ## Intake skin (INTAKE-SKIN-01)
 
@@ -132,6 +187,13 @@ No six-gate platform apparatus here (no PHI, no money, no platform code). The la
   no scarcity/urgency theater, no superlative efficacy claims, no unmarked filler) +
   a hardcoded-endpoint check. Proven **RED-first**: `scripts/copy-guard.test.mjs`
   asserts every rule fires on a planted violation *and* the tree is clean, on every run.
+- **catalog projection self-test** (`scripts/catalog.test.mjs`) — proves the anti-clone
+  law in miniature: shared line → both audience lenses, exclusive → exactly one.
+- **fail-closed per-page-meta check** — boots the built app and fails closed on any
+  missing / default / duplicate title, description, or OG (the addendum §4① failure:
+  every URL serving identical meta). Proven **RED-first**: `scripts/meta-check.test.mjs`
+  plants each failure mode. The CI build uses the GROWTH demo brand so the crawl covers
+  the storefront + labs (the superset of routes).
 - **link check** — boots the built app and crawls internal links.
 - **INTAKE-SKIN-01 parity suite** — the skin's acceptance target (spec §7). Logic unit
   tests (`scripts/intake-logic.test.mjs`: exclusive both directions, silent-422 degraded,
@@ -149,5 +211,6 @@ track advisories for anything you add.
 
 ## Not in scope
 
-GROWTH archetype, skill files, MCP, reviewed legal text, and any real medication
-content or imagery are separate deliverables — not this template.
+Skill files, MCP, reviewed legal text, live labs/payment integration, and any real
+medication content or imagery are separate deliverables — not this template. (The
+GROWTH archetype landed in WI-042; see the section above.)

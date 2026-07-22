@@ -11,6 +11,21 @@ import { PlaceholderNote } from "@/components/ui";
 import { VerticalModules } from "@/components/vertical";
 import { getActiveBrand } from "@/lib/brand";
 import { entryLink } from "@/lib/purple/entry-links";
+import { pageMetadata } from "@/lib/seo";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ condition: string }>;
+}): Promise<Metadata> {
+  const { condition } = await params;
+  const brand = getActiveBrand();
+  return pageMetadata({
+    title: `${brand.condition.name} — program`,
+    description: `Evergreen education and options for the ${brand.condition.name} (${condition}). Placeholder scaffolding; replace before launch.`,
+  });
+}
 
 /** Evergreen condition page: education + options, nav retained. */
 export default async function ConditionPage({

@@ -2,6 +2,13 @@ import { Shell } from "@/components/Shell";
 import { ClinicianBios } from "@/components/patterns";
 import { PlaceholderNote } from "@/components/ui";
 import { getActiveBrand } from "@/lib/brand";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "About",
+  description:
+    "Who we are — the identity and entity-disclosure surface a certification review looks for. Placeholder scaffolding; replace with verifiable details.",
+});
 
 /** About page — identity surface (a certification-readiness element). */
 export default function AboutPage() {
