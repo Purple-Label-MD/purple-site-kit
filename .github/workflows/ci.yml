@@ -1,0 +1,45 @@
+name: CI
+
+# Governance-lite ① — this repo's OWN law (no six-gate apparatus here):
+#   build + lint + fail-closed copy-guard (proven RED-first) + link check.
+# Combined with founder-merge (governance-lite ②: bot-authored PRs, Gregg merges,
+# enforced by branch protection) this is the whole gate for the kit.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint (biome)
+        run: npm run lint
+
+      # RED-first proof: asserts each NEVER-list rule fires on a planted violation
+      # AND that the real tree is clean. Fails closed if a rule is weakened or a
+      # violation slips in.
+      - name: Copy-guard self-test (RED-first + green)
+        run: npm run copy-guard:test
+
+      - name: Copy-guard scan (fail-closed)
+        run: npm run copy-guard
+
+      - name: Build
+        run: npm run build
+
+      # Boots the built app in credential-free mock mode and crawls internal links.
+      - name: Link check
+        run: npm run link-check

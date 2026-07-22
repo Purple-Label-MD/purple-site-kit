@@ -1,0 +1,33 @@
+{
+  "name": "purple-site-kit-launch",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Purple SITE-KIT — LAUNCH archetype: fork-and-own single-condition client starter (Next.js/Vercel-class). Distributable product, not platform code.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "copy-guard": "node scripts/copy-guard.mjs",
+    "copy-guard:test": "node --test scripts/copy-guard.test.mjs",
+    "link-check": "node scripts/link-check.mjs",
+    "verify": "npm run lint && npm run copy-guard:test && npm run copy-guard && npm run build && npm run link-check"
+  },
+  "dependencies": {
+    "next": "15.5.21",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@types/node": "22.15.3",
+    "@types/react": "19.1.6",
+    "@types/react-dom": "19.1.5",
+    "typescript": "5.8.3"
+  }
+}
