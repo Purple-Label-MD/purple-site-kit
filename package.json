@@ -15,8 +15,9 @@
     "lint:fix": "biome check --write .",
     "copy-guard": "node scripts/copy-guard.mjs",
     "copy-guard:test": "node --test scripts/copy-guard.test.mjs",
+    "catalog:test": "node --test scripts/catalog.test.mjs",
     "link-check": "node scripts/link-check.mjs",
-    "verify": "npm run lint && npm run copy-guard:test && npm run copy-guard && npm run build && npm run link-check"
+    "verify": "npm run lint && npm run copy-guard:test && npm run catalog:test && npm run copy-guard && npm run build && npm run link-check"
   },
   "dependencies": {
     "next": "15.5.21",

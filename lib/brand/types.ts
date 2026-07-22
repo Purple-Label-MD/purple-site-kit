@@ -34,6 +34,16 @@ export interface LogoSlot {
 
 export type EntryMode = "prelander" | "longscroll";
 
+/**
+ * GROWTH funnel-entry TOGGLE (WI-042 · Scope 4) — orthogonal to the home EntryMode.
+ * `buy-first` REQUIRES the eligibility-honesty block adjacent to every buy control
+ * (addendum §4.③ + the refund-on-decline law); `quiz-first` sends intake-first.
+ */
+export type FunnelMode = "quiz-first" | "buy-first";
+
+/** Which archetype a brand config drives. LAUNCH is the single-condition starter. */
+export type Archetype = "launch" | "growth";
+
 export interface Sku {
   id: string;
   /** Stable offering ref used on entry links (never a free-text product name). */
@@ -102,6 +112,19 @@ export interface BrandConfig {
   tagline: string;
   logo: LogoSlot;
   theme: ThemeTokens;
+  /** Archetype this brand drives (default "launch" when omitted). */
+  archetype?: Archetype;
+  /**
+   * GROWTH growth-layer (WI-042). Present only for archetype "growth": the audience
+   * lenses, the single projected catalog, and the default funnel-entry toggle.
+   * A fork swaps the catalog config; the token SHAPE never changes.
+   */
+  growth?: {
+    audiences: import("@/lib/catalog/types").Audience[];
+    catalog: import("@/lib/catalog/types").Catalog;
+    /** Default entry mode; a campaign may override via ?mode= (Scope 4). */
+    funnelMode: FunnelMode;
+  };
   /** Home entry grammar — a template TOGGLE, not a single answer (teardown §1.10). */
   entryMode: EntryMode;
   /** Nav-strip toggle on campaign landers (teardown §2 LAUNCH). */

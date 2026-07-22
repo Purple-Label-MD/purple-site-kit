@@ -1,4 +1,5 @@
 import { aurora } from "@/lib/brand/aurora";
+import { growth } from "@/lib/brand/growth";
 import { peer } from "@/lib/brand/peer";
 import type { BrandConfig, ThemeTokens } from "@/lib/brand/types";
 import { brandId } from "@/lib/config";
@@ -7,6 +8,7 @@ import { brandId } from "@/lib/config";
 export const BRANDS: Record<string, BrandConfig> = {
   [aurora.brandId]: aurora,
   [peer.brandId]: peer,
+  [growth.brandId]: growth,
 };
 
 /** Resolve a brand by id, falling back to Aurora if the id is unknown. */
