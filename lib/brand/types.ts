@@ -23,6 +23,24 @@ export interface ThemeTokens {
   fontSans: string;
   radius: string;
   maxWidth: string;
+  /**
+   * OPTIONAL intake-skin (INTAKE-SKIN-01) token overrides — the intake's own themable
+   * surface (spec §6). When omitted, the intake inherits BRAND-01 defaults (purple
+   * `#6D28D9` accent, near-black ink, warm canvas) regardless of the site palette.
+   * A brand rethemes the intake by setting these; grammar/behavior are never themable.
+   */
+  intake?: {
+    accent?: string;
+    accentTint?: string;
+    canvas?: string;
+    surface?: string;
+    ink?: string;
+    inkSoft?: string;
+    cardBorder?: string;
+    radius?: string;
+    font?: string;
+    headlineAlign?: "center" | "left";
+  };
 }
 
 export interface LogoSlot {

@@ -82,8 +82,8 @@ which attach the key server-side.
 - **Purple wiring** — entry-link composer, a **headless intake renderer** (the drop-in
   component: server-authoritative resolve→next loop, one node per screen, exclusive
   options, prefill-always-confirmed, address typeahead, file-capture upload refs,
-  abandon), auth-trio pages, a **webhook receiver with HMAC verification**, a
-  journey-status read, and a clearly-marked **checkout stub**.
+  abandon) skinned to **INTAKE-SKIN-01** (below), auth-trio pages, a **webhook receiver
+  with HMAC verification**, a journey-status read, and a clearly-marked **checkout stub**.
 - **Pattern components** — 3-step ritual, trust triad, seal *slot* (placement only —
   never a shipped seal), two-SKU ladder + commitment grid, objection-ordered FAQ,
   testimonials with a built-in results-vary disclaimer, clinician-bio slots.
@@ -155,6 +155,29 @@ Routes: `/{audience}` (storefront), `/{audience}/{offering}` (condition unit),
 `/labs`, `/labs/{panel}`, `/labs/{individual,packages,what-we-test,how-it-works}`.
 Audience segments are SSG (`generateStaticParams` + `dynamicParams = false`).
 
+## Intake skin (INTAKE-SKIN-01)
+
+The intake renderer ships the kit-wide default question skin — every template and demo
+site inherits it; clients customize **tokens only**, never the grammar (INT-A-06):
+
+- **Grammar** — one question per screen, canvas-vs-card depth (cards float on a warm
+  canvas; borders near-invisible), centered headline. Selection is **2px accent border +
+  filled check, interior stays white** (no tint wash).
+- **Behavior** — single-select: click → highlight → ~220ms confirm dwell → auto-advance
+  (input locked during dwell); number keys 1–9 select. Multi-select: right-edge check,
+  **structural exclusive semantics** (an exclusive "None" clears siblings and vice-versa,
+  no error copy) driven by the `option.exclusive` data flag (never inferred from labels).
+  240ms slide; `prefers-reduced-motion` ⇒ instant.
+- **Chrome** — thin server-fraction progress bar + Back + a persistent "Contact us"
+  escape hatch; sticky **Next** pill with visible gating.
+- **Theming** — the intake exposes its own `--pl-*` tokens (accent, canvas, ink, surface,
+  radius, font), defaulting to **BRAND-01** (`#6D28D9`). A brand rethemes via
+  `theme.intake` overrides (see `lib/brand/peer.ts`) — tokens only.
+- **Server contract unchanged** — the renderer keeps the resolve→next→complete loop and
+  server-supplied progress exactly as shipped; it consumes the ratified option
+  presentation model (`{code, label, sub?, exclusive?}`) when present and falls back to
+  bare codes + a silent 422 resolution when a live gateway predates it.
+
 ## CI — this repo's whole gate (governance-lite)
 
 No six-gate platform apparatus here (no PHI, no money, no platform code). The law is:
@@ -172,6 +195,11 @@ No six-gate platform apparatus here (no PHI, no money, no platform code). The la
   plants each failure mode. The CI build uses the GROWTH demo brand so the crawl covers
   the storefront + labs (the superset of routes).
 - **link check** — boots the built app and crawls internal links.
+- **INTAKE-SKIN-01 parity suite** — the skin's acceptance target (spec §7). Logic unit
+  tests (`scripts/intake-logic.test.mjs`: exclusive both directions, silent-422 degraded,
+  number-key select, gating) + a browser suite (`scripts/parity.mjs`, Playwright/Chromium:
+  click→auto-advance, completion bar + Back, reduced-motion instant, and a settled
+  computed-style audit) run on **both demo brands** (the tokens-only retheme proof).
 
 PRs are **bot-authored; the founder merges** (enforced by branch protection).
 
