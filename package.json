@@ -20,7 +20,8 @@
     "meta-check:test": "node --test scripts/meta-check.test.mjs",
     "link-check": "node scripts/link-check.mjs",
     "build:demo": "NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_growth next build",
-    "verify": "npm run lint && npm run copy-guard:test && npm run catalog:test && npm run meta-check:test && npm run copy-guard && npm run build:demo && npm run link-check && npm run meta-check"
+    "build:brands": "NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_aurora next build && NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_peer next build",
+    "verify": "npm run lint && npm run copy-guard:test && npm run catalog:test && npm run meta-check:test && npm run copy-guard && npm run build:demo && npm run link-check && npm run meta-check && npm run build:brands"
   },
   "dependencies": {
     "next": "15.5.21",
