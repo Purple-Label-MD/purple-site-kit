@@ -1,0 +1,91 @@
+import { Shell } from "@/components/Shell";
+import {
+  ClinicianBios,
+  FaqBattery,
+  SkuLadder,
+  Testimonials,
+  ThreeStepRitual,
+  TrustTriad,
+} from "@/components/patterns";
+import { PlaceholderNote } from "@/components/ui";
+import { VerticalModules } from "@/components/vertical";
+import { getActiveBrand } from "@/lib/brand";
+import { entryLink } from "@/lib/purple/entry-links";
+
+/**
+ * Home page. The entry grammar is a template TOGGLE (teardown §1.10) driven by
+ * brand.entryMode: a thin PRE-LANDER that routes to the campaign/condition, or a
+ * LONG-SCROLL single-mouth page where every CTA converges on the intake.
+ */
+export default function HomePage() {
+  const brand = getActiveBrand();
+  const c = brand.condition;
+
+  return (
+    <Shell brand={brand}>
+      <section className="section">
+        <div className="container">
+          <div className="eyebrow">{brand.name}</div>
+          <h1 style={{ fontSize: 40, margin: "8px 0 12px", maxWidth: 720 }}>{c.heroHeadline}</h1>
+          <p className="muted" style={{ maxWidth: 620, fontSize: 18 }}>
+            {c.heroSub}
+          </p>
+          <div style={{ marginTop: 8 }}>
+            <PlaceholderNote>hero copy is scaffolding — replace before launch</PlaceholderNote>
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+            <a className="btn" href={entryLink()}>
+              {brand.copy.cta_primary}
+            </a>
+            <a className="btn btn--secondary" href={`/condition/${c.slug}`}>
+              {brand.copy.cta_secondary}
+            </a>
+          </div>
+          <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
+            Entry mode: <strong>{brand.entryMode}</strong> (set per brand). Eligibility is decided
+            during clinician review; you may not be suitable.
+          </p>
+        </div>
+      </section>
+
+      <TrustTriad brand={brand} />
+
+      {brand.entryMode === "prelander" ? (
+        // Pre-lander: thin router → condition/campaign, no long conversion body.
+        <section className="section">
+          <div className="container">
+            <h2>Where to next</h2>
+            <div className="grid grid--2" style={{ marginTop: 12 }}>
+              <a className="card" href={`/condition/${c.slug}`}>
+                <strong>Learn about the {c.name}</strong>
+                <p className="muted">Evergreen condition page with education and options.</p>
+              </a>
+              <a className="card" href={`/condition/${c.slug}/launch-special`}>
+                <strong>See the current campaign</strong>
+                <p className="muted">A focused campaign lander (nav-stripped per brand).</p>
+              </a>
+            </div>
+          </div>
+        </section>
+      ) : (
+        // Long-scroll single-mouth: the whole conversion document, one intake mouth.
+        <>
+          <ThreeStepRitual brand={brand} />
+          {brand.vertical ? <VerticalModules brand={brand} /> : null}
+          <SkuLadder brand={brand} />
+          <Testimonials brand={brand} />
+          <ClinicianBios brand={brand} />
+          <FaqBattery brand={brand} />
+          <section className="section">
+            <div className="container" style={{ textAlign: "center" }}>
+              <h2>Ready when you are</h2>
+              <a className="btn" href={entryLink()}>
+                {brand.copy.cta_primary}
+              </a>
+            </div>
+          </section>
+        </>
+      )}
+    </Shell>
+  );
+}
