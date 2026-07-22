@@ -16,17 +16,17 @@
  * applies a per-campaign `?mode=` override on the client. Page stays SSG.
  */
 
-import { useSearchParams } from "next/navigation";
 import type { FunnelMode } from "@/lib/brand/types";
 import { entryLink } from "@/lib/purple/entry-links";
+import { useSearchParams } from "next/navigation";
 
 /** The eligibility-honesty block — mandatory beside every buy-first buy control. */
 export function EligibilityHonesty() {
   return (
     <p className="eligibility-honesty" role="note">
-      A licensed clinician reviews every order. If you are not a fit, your order is not dispensed and
-      you are refunded in full, automatically — you are never charged for a medication a clinician
-      does not approve.
+      A licensed clinician reviews every order. If you are not a fit, your order is not dispensed
+      and you are refunded in full, automatically — you are never charged for a medication a
+      clinician does not approve.
     </p>
   );
 }

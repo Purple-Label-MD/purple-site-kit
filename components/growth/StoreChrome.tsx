@@ -89,3 +89,45 @@ export function GrowthShell({
     </>
   );
 }
+
+/** Audience-independent nav (labs root + other cross-audience pages). */
+export function GrowthTopNav({ brand }: { brand: BrandConfig }) {
+  const growth = requireGrowth(brand);
+  return (
+    <nav className="site-nav container" aria-label="Primary">
+      <a className="wordmark" href="/">
+        {brand.logo.wordmark}
+      </a>
+      <div className="links">
+        {growth.audiences.map((a) => (
+          <a key={a.id} href={`/${a.slug}`}>
+            {a.label}
+          </a>
+        ))}
+        <a href="/labs" style={{ fontWeight: 700 }}>
+          Labs
+        </a>
+        <a href="/about">About</a>
+        <a href="/faq">FAQ</a>
+        <a href="/members">{brand.copy.member_entry}</a>
+      </div>
+    </nav>
+  );
+}
+
+/** Shell for cross-audience pages (labs root, transparency, ritual). */
+export function GrowthGenericShell({
+  brand,
+  children,
+}: {
+  brand: BrandConfig;
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      <GrowthTopNav brand={brand} />
+      <main>{children}</main>
+      <SiteFooter brand={brand} />
+    </>
+  );
+}
