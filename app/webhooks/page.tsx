@@ -2,6 +2,13 @@ import { Shell } from "@/components/Shell";
 import { WebhookDemo } from "@/components/webhooks/WebhookDemo";
 import { getActiveBrand } from "@/lib/brand";
 import { listWebhookEventTypes } from "@/lib/purple/client";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Webhooks console",
+  description:
+    "The webhook event catalog, register/test-fire flow, and HMAC receiver self-test — operator-facing documentation for a fork, not a patient surface.",
+});
 
 /**
  * Webhooks example page (Scope 2): the event catalog, the register/test-fire flow,

@@ -9,6 +9,21 @@ import {
 import { PlaceholderNote } from "@/components/ui";
 import { getActiveBrand } from "@/lib/brand";
 import { entryLink } from "@/lib/purple/entry-links";
+import { pageMetadata } from "@/lib/seo";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ condition: string; campaign: string }>;
+}): Promise<Metadata> {
+  const { condition, campaign } = await params;
+  const brand = getActiveBrand();
+  return pageMetadata({
+    title: `${brand.condition.name} — ${campaign} campaign`,
+    description: `Campaign lander for ${campaign} (${condition}). Placeholder scaffolding; the nav-strip toggle is brand-driven. Replace before launch.`,
+  });
+}
 
 /**
  * Campaign lander, nested `/condition/{condition}/{campaign}/` (teardown §2 LAUNCH).

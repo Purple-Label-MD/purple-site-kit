@@ -1,6 +1,13 @@
 import { Shell } from "@/components/Shell";
 import { PlaceholderNote } from "@/components/ui";
 import { getActiveBrand } from "@/lib/brand";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Member sign in",
+  description:
+    "Member entry — the auth-trio surface. Passwordless hosted sign-in via the gateway; this is operator-facing scaffolding for a fork.",
+});
 
 /**
  * Member entry — the auth-trio surface (Scope 2). Login/logout are hosted Universal

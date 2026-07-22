@@ -12,6 +12,19 @@ import { PlaceholderNote } from "@/components/ui";
 import { VerticalModules } from "@/components/vertical";
 import { getActiveBrand } from "@/lib/brand";
 import { entryLink } from "@/lib/purple/entry-links";
+import { pageMetadata } from "@/lib/seo";
+import type { Metadata } from "next";
+
+export function generateMetadata(): Metadata {
+  const brand = getActiveBrand();
+  const isGrowth = brand.archetype === "growth" && brand.growth;
+  return pageMetadata({
+    title: "Home",
+    description: isGrowth
+      ? `${brand.name} — a multi-audience storefront over one program catalog. Placeholder scaffolding; replace before launch.`
+      : `${brand.name} — ${brand.condition.name}. Placeholder single-condition starter; replace before launch.`,
+  });
+}
 
 /**
  * Home page. LAUNCH brands render the single-condition home (entry grammar toggle,

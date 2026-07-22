@@ -1,6 +1,13 @@
 import { Shell } from "@/components/Shell";
 import { CounselBanner } from "@/components/ui";
 import { getActiveBrand } from "@/lib/brand";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Checkout (stub)",
+  description:
+    "The checkout stub — a placeholder funnel terminus that takes no payment and shows no pricing. It wakes when the commerce lane ships.",
+});
 
 /**
  * CHECKOUT — STUB (Scope 2). Deliberately not implemented: the commerce family has

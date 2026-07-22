@@ -1,6 +1,13 @@
 import { Shell } from "@/components/Shell";
 import { getActiveBrand } from "@/lib/brand";
 import { readJourneyStatus } from "@/lib/purple/client";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Journey status",
+  description:
+    "A read-only journey-status projection example: identifiers and a status value only, never patient data and never an input to any decision.",
+});
 
 /**
  * Journey-status read example (Scope 2). A read-only projection: identifiers + a
