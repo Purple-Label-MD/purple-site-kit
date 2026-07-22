@@ -109,6 +109,25 @@ export const MOCK_NODES: MockNode[] = [
     exclusiveCode: "opt_pref_none",
   },
   {
+    // DEGRADED-PATH fixture (WI-043 Δ1): a pre-INT-A-09 gateway node — the server
+    // enforces exclusivity (exclusiveCode) but the options carry NO `exclusive` flag,
+    // so the client can't clear structurally. Selecting the exclusive option WITH a
+    // sibling must resolve SILENTLY on the 422 (most-recent wins, one auto-resubmit,
+    // no error copy). Exclusivity is never inferred from the "None" label (INT-A-07).
+    node: {
+      node_id: "nd_prefs_legacy",
+      kind: "question",
+      section_id: MOCK_SECTIONS.about,
+      control: "multi_select",
+      fact: "placeholder_preferences_legacy",
+      required: false,
+      progress: 0.5,
+      option_codes: ["opt_leg_a", "opt_leg_b", "opt_leg_none"],
+      copy: "Sample legacy multi-select (pre-INT-A-09 gateway; degraded exclusive path).",
+    },
+    exclusiveCode: "opt_leg_none",
+  },
+  {
     node: {
       node_id: "nd_range",
       kind: "question",

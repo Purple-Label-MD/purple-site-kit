@@ -32,7 +32,11 @@ const NO_ANIM =
   "*,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;transition-duration:0s!important;}";
 
 async function openStart(browser, contextOpts) {
-  const page = await (await browser.newContext(contextOpts)).newPage();
+  // A tall viewport keeps the answer cards clear of the fixed footer pill so real
+  // clicks land on the cards (not the overlay), without needing force.
+  const page = await (
+    await browser.newContext({ viewport: { width: 900, height: 1400 }, ...contextOpts })
+  ).newPage();
   await page.goto(`${BASE}/start`);
   await page.addStyleTag({ content: NO_ANIM });
   await page.waitForSelector(".pl-card, .pl-continue", { timeout: 15_000 });
@@ -195,8 +199,75 @@ async function main() {
           styles.unselBorder !== expectRgb && styles.unselBorderWidth === "1px",
           `${styles.unselBorder} @ ${styles.unselBorderWidth}`,
         );
+
+        // T3 (on the intake surface): the exclusive option clears siblings — nag-free.
+        // The first card is selected (above); clicking the exclusive (last) must flip it.
+        // Direct dispatch: the last card sits under the fixed footer pill, so a real
+        // pointer click is intercepted — pointer hit-testing is already covered by T1.
+        await page
+          .locator(".pl-card")
+          .last()
+          .evaluate((el) => el.click());
+        const t3 = await page.evaluate(() => {
+          const cards = [...document.querySelectorAll(".pl-card")];
+          return {
+            first: cards[0]?.getAttribute("aria-checked"),
+            last: cards[cards.length - 1]?.getAttribute("aria-checked"),
+            err: /cannot be combined|please uncheck|\berror\b/i.test(document.body.innerText),
+          };
+        });
+        check(
+          "T3 exclusive clears siblings (DOM)",
+          t3.first === "false" && t3.last === "true",
+          `first=${t3.first} last=${t3.last}`,
+        );
+        check("T3 no error copy on exclusive select", !t3.err);
       }
       await page.close();
+    }
+
+    if (MODE === "full") {
+      // ── T3b: degraded path (flagless node) — server 422 resolves SILENTLY ──────
+      // The legacy node carries no client `exclusive` flag, so selecting a sibling +
+      // the exclusive option submits a conflict; the renderer must silently collapse
+      // to most-recent and auto-resubmit once, advancing with NO error copy (Δ1).
+      {
+        const page = await openStart(browser);
+        let guard = 0;
+        while (
+          !(await isComplete(page)) &&
+          !(await headline(page)).toLowerCase().includes("legacy")
+        ) {
+          await answerNode(page);
+          if (++guard > 20) throw new Error("did not reach the legacy degraded node");
+        }
+        check(
+          "T3b reached the degraded node",
+          (await headline(page)).toLowerCase().includes("legacy"),
+        );
+        await page
+          .locator(".pl-card")
+          .first()
+          .evaluate((el) => el.click()); // sibling
+        await page
+          .locator(".pl-card")
+          .last()
+          .evaluate((el) => el.click()); // exclusive (no flag; under footer)
+        const prev = await headline(page);
+        await page.locator(".pl-continue").click(); // conflict → 422 → silent resolve → advance
+        let advanced = true;
+        try {
+          await waitNodeChange(page, prev, 4000);
+        } catch {
+          advanced = false;
+        }
+        const err = await page.evaluate(() =>
+          /cannot be combined|please uncheck|\berror\b/i.test(document.body.innerText),
+        );
+        check("T3b degraded 422 resolves silently (advanced)", advanced);
+        check("T3b no nag on the degraded path", !err);
+        await page.close();
+      }
     }
 
     if (MODE === "full") {
