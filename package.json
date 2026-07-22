@@ -15,8 +15,12 @@
     "lint:fix": "biome check --write .",
     "copy-guard": "node scripts/copy-guard.mjs",
     "copy-guard:test": "node --test scripts/copy-guard.test.mjs",
+    "parity:logic": "node --test scripts/intake-logic.test.mjs",
+    "parity:full": "node scripts/parity.mjs",
+    "parity:retheme": "EXPECT_ACCENT=#b8562f PARITY_MODE=audit node scripts/parity.mjs",
+    "build:peer": "NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_peer next build",
     "link-check": "node scripts/link-check.mjs",
-    "verify": "npm run lint && npm run copy-guard:test && npm run copy-guard && npm run build && npm run link-check"
+    "verify": "npm run lint && npm run copy-guard:test && npm run parity:logic && npm run copy-guard && npm run build && npm run link-check && npm run parity:full && npm run build:peer && npm run parity:retheme"
   },
   "dependencies": {
     "next": "15.5.21",
@@ -28,6 +32,7 @@
     "@types/node": "22.15.3",
     "@types/react": "19.1.6",
     "@types/react-dom": "19.1.5",
+    "playwright": "^1.61.1",
     "typescript": "5.8.3"
   }
 }

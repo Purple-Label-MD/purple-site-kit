@@ -112,18 +112,22 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
     loadFirst();
   }, [loadFirst]);
 
-  // Best-effort abandon beacon if the patient leaves mid-flow.
+  // Best-effort abandon beacon if the patient leaves mid-flow. This must fire ONLY on
+  // real unmount — a [step]-dependency here would fire the cleanup on every advance and
+  // abandon the live session. So we read the latest status from a ref and use empty deps.
+  const statusRef = useRef<string | undefined>(undefined);
+  statusRef.current = step?.status;
   useEffect(() => {
     return () => {
       const sid = sessionRef.current;
-      if (sid && step && step.status === "active" && typeof navigator !== "undefined") {
+      if (sid && statusRef.current === "active" && typeof navigator !== "undefined") {
         navigator.sendBeacon?.(
           "/api/purple/instrument/abandon",
           new Blob([JSON.stringify({ session_id: sid })], { type: "application/json" }),
         );
       }
     };
-  }, [step]);
+  }, []);
 
   const callNext = useCallback(async (answer?: AnswerValue): Promise<InstrumentStep | null> => {
     const sid = sessionRef.current;

@@ -1,9 +1,10 @@
 name: CI
 
 # Governance-lite ① — this repo's OWN law (no six-gate apparatus here):
-#   build + lint + fail-closed copy-guard (proven RED-first) + link check.
-# Combined with founder-merge (governance-lite ②: bot-authored PRs, Gregg merges,
-# enforced by branch protection) this is the whole gate for the kit.
+#   build + lint + fail-closed copy-guard (proven RED-first) + link check
+#   + INTAKE-SKIN-01 parity suite (spec §7: logic unit tests + browser suite on
+#   both demo brands). Combined with founder-merge (governance-lite ②: bot-authored
+#   PRs, Gregg merges, enforced by branch protection) this is the whole gate.
 
 on:
   push:
@@ -29,10 +30,13 @@ jobs:
         run: npm run lint
 
       # RED-first proof: asserts each NEVER-list rule fires on a planted violation
-      # AND that the real tree is clean. Fails closed if a rule is weakened or a
-      # violation slips in.
+      # AND that the real tree is clean. Fails closed if a rule is weakened.
       - name: Copy-guard self-test (RED-first + green)
         run: npm run copy-guard:test
+
+      # INTAKE-SKIN-01 deterministic interaction rules (T2/T3/T3b/gating, INT-A-07).
+      - name: Intake parity — logic unit tests
+        run: npm run parity:logic
 
       - name: Copy-guard scan (fail-closed)
         run: npm run copy-guard
@@ -43,3 +47,18 @@ jobs:
       # Boots the built app in credential-free mock mode and crawls internal links.
       - name: Link check
         run: npm run link-check
+
+      # Browser-level parity (spec §7): T1 auto-advance, T4 completion/bar/back,
+      # T5 reduced-motion instant, settled computed-style audit (#6D28D9 default).
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Intake parity — browser suite (BRAND-01 default)
+        run: npm run parity:full
+
+      # Two-brand retheme proof (tokens only): rebuild peer, re-audit the accent.
+      - name: Build (peer demo brand)
+        run: npm run build:peer
+
+      - name: Intake parity — retheme audit (peer tokens)
+        run: npm run parity:retheme
