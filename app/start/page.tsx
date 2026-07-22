@@ -1,6 +1,13 @@
 import { Shell } from "@/components/Shell";
 import { IntakeRenderer } from "@/components/intake/IntakeRenderer";
 import { getActiveBrand } from "@/lib/brand";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Start your intake",
+  description:
+    "The headless intake renderer host — a server-authoritative resolve→next loop, one question per screen. Nav is stripped: a single-mouth surface.",
+});
 
 /**
  * Intake host page. Forwards the incoming entry-context query verbatim to the

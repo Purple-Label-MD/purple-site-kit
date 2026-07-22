@@ -1,6 +1,13 @@
 import { Shell } from "@/components/Shell";
 import { CounselBanner } from "@/components/ui";
 import { getActiveBrand } from "@/lib/brand";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Checkout (stub)",
+  description:
+    "The checkout stub — a placeholder funnel terminus that takes no payment and shows no pricing. It wakes when the commerce lane ships.",
+});
 
 /**
  * CHECKOUT — STUB (Scope 2). Deliberately not implemented: the commerce family has
@@ -11,10 +18,13 @@ import { getActiveBrand } from "@/lib/brand";
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ journey_id?: string }>;
+  searchParams: Promise<{ journey_id?: string; offering?: string; next?: string }>;
 }) {
-  const { journey_id } = await searchParams;
+  const { journey_id, offering, next } = await searchParams;
   const brand = getActiveBrand();
+  // Buy-first (WI-042 §4): the stub is the terminus of the buy step; from here the
+  // patient continues to the clinician-guided intake. Only same-origin paths honored.
+  const intakeNext = next?.startsWith("/") && !next.startsWith("//") ? next : undefined;
   return (
     <Shell brand={brand} stripped>
       <section className="section">
@@ -31,14 +41,27 @@ export default async function CheckoutPage({
               <>
                 Enrollment <code>{journey_id}</code> reached checkout.
               </>
+            ) : offering ? (
+              <>
+                Buy-first path for <code>{offering}</code> reached the checkout stub. No payment is
+                taken; a licensed clinician reviews every order and unqualified orders are refunded
+                in full.
+              </>
             ) : (
               "No enrollment id was supplied."
             )}
           </p>
           <CounselBanner topic="pricing presentation + purchase terms (when commerce lands)" />
-          <a className="btn btn--secondary" href="/">
-            Back to home
-          </a>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {intakeNext ? (
+              <a className="btn" href={intakeNext}>
+                Continue to clinician-guided intake →
+              </a>
+            ) : null}
+            <a className="btn btn--secondary" href="/">
+              Back to home
+            </a>
+          </div>
         </div>
       </section>
     </Shell>

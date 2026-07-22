@@ -1,4 +1,5 @@
 import { Shell } from "@/components/Shell";
+import { GrowthHome } from "@/components/growth/GrowthHome";
 import {
   ClinicianBios,
   FaqBattery,
@@ -11,14 +12,30 @@ import { PlaceholderNote } from "@/components/ui";
 import { VerticalModules } from "@/components/vertical";
 import { getActiveBrand } from "@/lib/brand";
 import { entryLink } from "@/lib/purple/entry-links";
+import { pageMetadata } from "@/lib/seo";
+import type { Metadata } from "next";
+
+export function generateMetadata(): Metadata {
+  const brand = getActiveBrand();
+  const isGrowth = brand.archetype === "growth" && brand.growth;
+  return pageMetadata({
+    title: "Home",
+    description: isGrowth
+      ? `${brand.name} — a multi-audience storefront over one program catalog. Placeholder scaffolding; replace before launch.`
+      : `${brand.name} — ${brand.condition.name}. Placeholder single-condition starter; replace before launch.`,
+  });
+}
 
 /**
- * Home page. The entry grammar is a template TOGGLE (teardown §1.10) driven by
- * brand.entryMode: a thin PRE-LANDER that routes to the campaign/condition, or a
- * LONG-SCROLL single-mouth page where every CTA converges on the intake.
+ * Home page. LAUNCH brands render the single-condition home (entry grammar toggle,
+ * teardown §1.10). GROWTH brands render the multi-audience storefront landing
+ * (WI-042) — an audience chooser over one catalog config.
  */
 export default function HomePage() {
   const brand = getActiveBrand();
+  if (brand.archetype === "growth" && brand.growth) {
+    return <GrowthHome brand={brand} />;
+  }
   const c = brand.condition;
 
   return (

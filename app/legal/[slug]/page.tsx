@@ -2,10 +2,26 @@ import { Shell } from "@/components/Shell";
 import { CounselBanner, PlaceholderNote } from "@/components/ui";
 import { getActiveBrand } from "@/lib/brand";
 import { LEGAL_SLOTS, LEGAL_SLUGS } from "@/lib/legal-slots";
+import { pageMetadata } from "@/lib/seo";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 export function generateStaticParams() {
   return LEGAL_SLUGS.map((slug) => ({ slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const slot = LEGAL_SLOTS[slug];
+  if (!slot) return {};
+  return pageMetadata({
+    title: `${slot.title} (placeholder)`,
+    description: `${slot.title} — a REQUIRES-COUNSEL-REVIEW placeholder. Certification review looks for: ${slot.reviewNeeds}`,
+  });
 }
 
 /** Legal slot page — always a marked placeholder with a REQUIRES-COUNSEL-REVIEW banner. */

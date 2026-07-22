@@ -1,6 +1,13 @@
 import { Shell } from "@/components/Shell";
 import { CounselBanner, PlaceholderNote } from "@/components/ui";
 import { getActiveBrand } from "@/lib/brand";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Contact",
+  description:
+    "How to reach us — a required contact and entity-disclosure surface for certification review. Placeholder details; replace before launch.",
+});
 
 /** Contact page — a required contact/identity surface for certification review. */
 export default function ContactPage() {

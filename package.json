@@ -15,8 +15,13 @@
     "lint:fix": "biome check --write .",
     "copy-guard": "node scripts/copy-guard.mjs",
     "copy-guard:test": "node --test scripts/copy-guard.test.mjs",
+    "catalog:test": "node --test scripts/catalog.test.mjs",
+    "meta-check": "node scripts/meta-check.mjs",
+    "meta-check:test": "node --test scripts/meta-check.test.mjs",
     "link-check": "node scripts/link-check.mjs",
-    "verify": "npm run lint && npm run copy-guard:test && npm run copy-guard && npm run build && npm run link-check"
+    "build:demo": "NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_growth next build",
+    "build:brands": "NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_aurora next build && NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_peer next build",
+    "verify": "npm run lint && npm run copy-guard:test && npm run catalog:test && npm run meta-check:test && npm run copy-guard && npm run build:demo && npm run link-check && npm run meta-check && npm run build:brands"
   },
   "dependencies": {
     "next": "15.5.21",

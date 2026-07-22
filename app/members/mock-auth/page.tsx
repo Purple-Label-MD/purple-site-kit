@@ -1,5 +1,12 @@
 import { Shell } from "@/components/Shell";
 import { getActiveBrand } from "@/lib/brand";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Sign in (mock notice)",
+  description:
+    "A credential-free mock notice shown in place of the hosted Universal Login flow. In live mode the auth routes redirect to the gateway.",
+});
 
 /**
  * Placeholder auth notice shown in credential-free mock mode in place of the hosted
