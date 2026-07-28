@@ -19,13 +19,14 @@
     "parity:full": "node scripts/parity.mjs",
     "parity:retheme": "EXPECT_ACCENT=#b8562f PARITY_MODE=audit node scripts/parity.mjs",
     "catalog:test": "node --test scripts/catalog.test.mjs",
+    "checkout-links:test": "node --test scripts/checkout-links.test.mjs",
     "meta-check": "node scripts/meta-check.mjs",
     "meta-check:test": "node --test scripts/meta-check.test.mjs",
     "link-check": "node scripts/link-check.mjs",
     "build:demo": "NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_growth next build",
     "build:peer": "NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_peer next build",
     "build:brands": "NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_aurora next build && NEXT_PUBLIC_PURPLE_BRAND_ID=brd_demo_peer next build",
-    "verify": "npm run lint && npm run copy-guard:test && npm run parity:logic && npm run catalog:test && npm run meta-check:test && npm run copy-guard && npm run build:demo && npm run link-check && npm run meta-check && npm run build && npm run parity:full && npm run build:peer && npm run parity:retheme"
+    "verify": "npm run lint && npm run copy-guard:test && npm run parity:logic && npm run catalog:test && npm run checkout-links:test && npm run meta-check:test && npm run copy-guard && npm run build:demo && npm run link-check && npm run meta-check && npm run build && npm run parity:full && npm run build:peer && npm run parity:retheme"
   },
   "dependencies": {
     "next": "15.5.21",

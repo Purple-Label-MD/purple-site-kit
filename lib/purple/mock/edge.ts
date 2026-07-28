@@ -168,16 +168,36 @@ export function mockAddressSuggest(partial: string): AddressSuggestion[] {
 }
 
 const STATUS_ROTATION: PublicJourneyStatus[] = ["RECEIVED", "IN_REVIEW", "APPROVED"];
+const POST_CHECKOUT_ROTATION: PublicJourneyStatus[] = ["PREPARING", "SHIPPED"];
+
+/**
+ * Journeys that completed the mock hosted-checkout walk (WI-084 §4). Process-memory
+ * only, same discipline as SESSIONS above — a demo signal, never a production store.
+ */
+const CHECKOUT_COMPLETED = new Set<string>();
 
 /** GET /journeys/{id}/status — synthetic status projection (identifiers + status only). */
 export function mockJourneyStatus(journeyId: string): PublicJourneyStatusRead {
   // Deterministic pick from the id so repeated reads are stable.
   const n = [...journeyId].reduce((a, c) => a + c.charCodeAt(0), 0);
+  const rotation = CHECKOUT_COMPLETED.has(journeyId) ? POST_CHECKOUT_ROTATION : STATUS_ROTATION;
   return {
     journey_id: journeyId,
-    public_status: STATUS_ROTATION[n % STATUS_ROTATION.length],
+    public_status: rotation[n % rotation.length],
     status_version: "v1",
   };
+}
+
+/**
+ * Mock-only: simulate the hosted checkout's completion signal so the credential-
+ * free walkthrough can observe a visible post-checkout status change (WI-084 §4).
+ * There is no live counterpart — the real hosted door owns real order truth, which
+ * the kit has no public read for (see WI-084 exit report). Callers MUST guard this
+ * behind isMockMode() themselves; this module never checks it.
+ */
+export function mockCompleteCheckout(journeyId: string): PublicJourneyStatusRead {
+  CHECKOUT_COMPLETED.add(journeyId);
+  return mockJourneyStatus(journeyId);
 }
 
 /** GET /webhooks/event-types — a representative slice of the projected catalog. */

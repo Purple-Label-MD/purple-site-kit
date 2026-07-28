@@ -56,6 +56,20 @@ export function apiKey(): string | undefined {
   return process.env.PURPLE_API_KEY?.trim() || undefined;
 }
 
+/**
+ * The platform-hosted checkout's origin (member portal) — an ORIGIN ONLY, no
+ * `/v1` suffix, no path, no trailing slash. This is the opposite convention from
+ * `apiBase()` above: the member portal is a page host, not a `/v1`-mounted API.
+ * Server-only (read inside the `/checkout` server component when composing the
+ * handoff link) — the browser never needs this value directly. Unset ⇒ the
+ * checkout wake renders its in-kit mock-hosted-checkout path (WI-084 §3/§4).
+ */
+export function memberPortalBase(): string | undefined {
+  const v = process.env.PURPLE_MEMBER_PORTAL_BASE?.trim();
+  if (!v) return undefined;
+  return v.replace(/\/+$/, "");
+}
+
 /** Server-only: HMAC signing secret for verifying inbound webhook deliveries. */
 export function webhookSecret(): string | undefined {
   return process.env.PURPLE_WEBHOOK_SECRET?.trim() || undefined;

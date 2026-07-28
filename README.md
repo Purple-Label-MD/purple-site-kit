@@ -7,8 +7,9 @@ it yours, and deploy it.
 
 > **Why this exists.** Certification (LegitScript-class) reviews a **live site**, and
 > payment due-diligence follows certification — so standing the site up is the long
-> pole of onboarding. This template compresses that to days. Checkout ships **stubbed**
-> and wakes when the commerce family lands; nothing here blocks on it.
+> pole of onboarding. This template compresses that to days. Checkout **hands off** to
+> the platform-hosted checkout (WI-084) — this template never collects payment details
+> or shows real pricing itself.
 
 Everything shipped here is **placeholder scaffolding**: no real medication content or
 imagery, no real pricing, no real clinician/patient data, no credentials. Replace it
@@ -40,6 +41,7 @@ Copy `.env.example` to `.env.local` and fill it in (never commit it):
 | `NEXT_PUBLIC_PURPLE_API_BASE` | The projected public gateway base **including `/v1`**. Setting it turns off mock mode. |
 | `NEXT_PUBLIC_PURPLE_BRAND_ID` | Your brand id (`brd_…`) — selects the brand config and rides as `X-Brand-Id`. |
 | `NEXT_PUBLIC_PURPLE_OFFERING_REF` | A stable offering ref preselected on entry links. |
+| `PURPLE_MEMBER_PORTAL_BASE` | The platform-hosted checkout's **origin** (no `/v1`, no path). Server-only. Unset ⇒ the checkout handoff targets an in-kit mock simulation instead. |
 | `PURPLE_API_KEY` | Server-only per-client M2M key (`Authorization: Bearer …`). Never exposed to the browser. |
 | `PURPLE_WEBHOOK_SECRET` | Server-only HMAC secret for verifying inbound webhook signatures. |
 
@@ -51,7 +53,7 @@ which attach the key server-side.
 
 > A test credential is not required to build or run. When your dev client is
 > provisioned, set the base URL + key and the same code path goes live. The synthetic
-> acceptance walkthrough (entry link → full intake → checkout stub → webhook events)
+> acceptance walkthrough (entry link → full intake → checkout handoff → webhook events)
 > runs against the live gateway at that point.
 
 ## The fork-and-own contract
@@ -77,13 +79,14 @@ which attach the key server-side.
 
 - **~12 page types** — home (pre-lander *or* long-scroll, per brand), condition page,
   nested campaign lander (`/condition/{c}/{campaign}` with a nav-strip toggle), About,
-  FAQ, Contact, legal slots, member entry, intake host, checkout stub, status page,
+  FAQ, Contact, legal slots, member entry, intake host, checkout handoff, status page,
   webhooks console.
 - **Purple wiring** — entry-link composer, a **headless intake renderer** (the drop-in
   component: server-authoritative resolve→next loop, one node per screen, exclusive
   options, prefill-always-confirmed, address typeahead, file-capture upload refs,
   abandon) skinned to **INTAKE-SKIN-01** (below), auth-trio pages, a **webhook receiver
-  with HMAC verification**, a journey-status read, and a clearly-marked **checkout stub**.
+  with HMAC verification**, a journey-status read, and a **checkout handoff** to the
+  platform-hosted checkout (WI-084) — never a payment field in this template.
 - **Pattern components** — 3-step ritual, trust triad, seal *slot* (placement only —
   never a shipped seal), two-SKU ladder + commitment grid, objection-ordered FAQ,
   testimonials with a built-in results-vary disclaimer, clinician-bio slots.
@@ -121,15 +124,17 @@ four capability deltas, all driven by **one catalog config** (`lib/catalog/`):
 2. **Entry-mode toggle** (`quiz-first | buy-first`) per brand, with a per-campaign
    `?mode=` override. **Buy-first requires** the eligibility-honesty block beside every
    buy control ("a licensed clinician reviews every order; not qualified = automatic full
-   refund") and routes the checkout **stub** → the intake renderer.
+   refund") and routes to the checkout **handoff** — offering-only, since no journey
+   exists yet; the hosted door renders its own honest lock state if it needs health
+   questions first — with a direct link onward to the intake renderer either way.
 3. **Supply-term selector** — a default-expanded, config-driven term ladder
    (`offering.supplyTerms`); the merchandising surface, not a post-click reveal.
 4. **Labs product line** — marketing-complete, **fulfillment-stubbed**: gendered panel
    ladders (basic/intermediate/advanced × audience), panel PDP grammar
    (name → what's tested → why → sample → turnaround), individual-vs-package split, a
    what-we-test transparency page, a how-it-works ritual, and therapy-adjacent panels
-   cross-linked as qualification on-ramps. Every labs CTA is gated like the checkout stub
-   until the labs lane (vendor + BAA) ships.
+   cross-linked as qualification on-ramps. Every labs CTA is fulfillment-stubbed the same
+   honest way checkout was before WI-084, until the labs lane (vendor + BAA) ships.
 
 ### GROWTH config schema
 
