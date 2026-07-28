@@ -66,6 +66,13 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
   const [pos, setPos] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The offering ref this session entered with (WI-084): the completion step never
+  // returns it (the node is null once complete), so it must ride from entry —
+  // the checkout handoff's `offering_ref` is required, never optional there.
+  const offeringRef = useMemo(
+    () => new URLSearchParams(initialQuery).get("offering") ?? undefined,
+    [initialQuery],
+  );
   const sessionRef = useRef<string | null>(null);
   const leftKeyRef = useRef<string[]>([]); // answer key used to advance FROM visited[i]
   const lastToggledRef = useRef<string | undefined>(undefined);
@@ -243,7 +250,7 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
       <main className="pl-stage">
         <div className="pl-node" key={`${step.session_id}-${pos}`} aria-live="polite">
           {complete ? (
-            <CompleteView step={step} />
+            <CompleteView step={step} offering={offeringRef} />
           ) : abandoned ? (
             <>
               <h1 className="pl-headline">This session was marked abandoned.</h1>
@@ -615,7 +622,10 @@ function FileControl({
   );
 }
 
-function CompleteView({ step }: { step: InstrumentStep }) {
+function CompleteView({ step, offering }: { step: InstrumentStep; offering?: string }) {
+  const checkoutHref = `/checkout?journey_id=${encodeURIComponent(step.journey_id)}${
+    offering ? `&offering=${encodeURIComponent(offering)}` : ""
+  }`;
   return (
     <>
       <h1 className="pl-headline">Intake complete (placeholder)</h1>
@@ -624,11 +634,8 @@ function CompleteView({ step }: { step: InstrumentStep }) {
         <code>{step.journey_id}</code>.
       </p>
       <div className="pl-footer">
-        <a
-          className="pl-continue"
-          href={`/checkout?journey_id=${encodeURIComponent(step.journey_id)}`}
-        >
-          Continue to checkout (stub)
+        <a className="pl-continue" href={checkoutHref}>
+          Continue to checkout →
         </a>
       </div>
       <p className="pl-disclaimer">

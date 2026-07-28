@@ -38,6 +38,10 @@ From `.env.example` → `.env.local` (git-ignored; verify before writing values)
   its digest — lost keys are re-minted, never recovered.)
 - `PURPLE_WEBHOOK_SECRET` — server-only HMAC secret (`psig_…`), **shown ONCE at webhook-endpoint
   registration**; verifies `X-Purple-Signature` on the kit's webhook receiver.
+- `PURPLE_MEMBER_PORTAL_BASE` (WI-084) — the platform-hosted checkout's ORIGIN, **no `/v1`, no
+  path, no trailing slash** (the opposite convention from the API base above — this is a page
+  host, not an API mount). Server-only. **Unset ⇒ the checkout handoff targets an in-kit mock
+  simulation** instead of a real payment surface — same shape, credential-free.
 
 **The BFF rule:** the browser NEVER calls the gateway. All Purple calls go through this app's
 same-origin `/api/purple/*` routes, which attach the key server-side. Zero hardcoded endpoints —
@@ -72,9 +76,18 @@ are **platform truth, per brand** — assigned in the Purple admin console, serv
 **Not yours — structure and law (route change requests upstream; never hack them in):**
 - **INTAKE-SKIN structure** — the headless renderer's screen grammar (exclusive options,
   prefill-always-confirmed, progress/back/escape) is a standard; brand expression = tokens only.
-- **The checkout surface** — its anatomy is the platform's commerce-door standard. In forks from
-  v0.1.0-era tags checkout ships as a clearly-marked STUB that wakes when the commerce family
-  lands — never fake-wake it, never build your own payment path around it.
+- **The checkout surface** — its anatomy is the platform's commerce-door standard, hosted on the
+  member origin (`PURPLE_MEMBER_PORTAL_BASE`), never in this kit. As of WI-084, `/checkout`
+  **composes a handoff link** — it carries `offering_ref` always, plus `journey_id` for the
+  primary post-intake entry (the intake renderer's completion step) or, for a buy-first entry
+  with no journey yet, `offering_ref` alone — the hosted door itself renders the honest lock
+  state if it needs health questions first. Never add a payment field, never fabricate a
+  `sku_id`/`therapy` value the kit wasn't given, never build a payment path around the door.
+  Forks from v0.1.0-era tags instead ship the pre-wake checkout STUB — upgrade the tag to get
+  the handoff. **Known limitation:** the kit's status page shows journey status only — there is
+  no public order-read op or commerce webhook family on the platform yet, so order/payment truth
+  past "handed off" isn't observable from the kit (see the WI-084 exit report if you need the
+  detail; don't invent a workaround here).
 - **The verify chain** — `npm run verify` (lint · copy-guard + its self-test · intake-logic
   parity · catalog projection tests · meta/link checks · multi-brand builds · retheme parity) is
   the acceptance law. Never weaken a guard to make a build pass; fix the content.
@@ -95,15 +108,18 @@ structure, a guard, legal, clinical, or claims — route it.**
 1. **Fork a released TAG, not main-tip** (e.g. `v0.1.0`) into the owning account; clone. Upstream
    updates arrive by deliberate merge of a newer tag.
 2. **Prove the mock walkthrough first** (credential-free): `npm install && npm run dev`, walk
-   entry link → intake → checkout stub → webhooks console. This baselines "the kit works" before
-   any credential enters the picture.
+   entry link → intake → checkout handoff (mock hosted-checkout simulation → mock pay) → status
+   page shows the advanced state → webhooks console. This baselines "the kit works" before any
+   credential enters the picture.
 3. **Brand the slots.** New config module under `lib/brand/` (copy `aurora.ts`), set
    `NEXT_PUBLIC_PURPLE_BRAND_ID` to it, fill tokens/copy/bios per the boundary above.
 4. **`npm run verify`** — the full chain, green, before any deploy.
 5. **Go live env.** `.env.local` (and later Vercel env): real base **with `/v1`**, brand id,
    offering ref from the ASSIGNED catalog, server-only key. Mock turns off by presence of the
-   base (set `NEXT_PUBLIC_PURPLE_MOCK=false` to be explicit). A `sk_live`-shaped anything is
-   refused platform-side by design — test credentials only in dev.
+   base (set `NEXT_PUBLIC_PURPLE_MOCK=false` to be explicit). Set `PURPLE_MEMBER_PORTAL_BASE`
+   (an origin, no `/v1`) to send the checkout handoff to the real hosted door instead of the mock
+   simulation. A `sk_live`-shaped anything is refused platform-side by design — test credentials
+   only in dev.
 6. **Vercel.** Project from the fork; env vars in project settings (server-only secrets never
    `NEXT_PUBLIC_`); deploy. Previews validate every change; production promotes from green.
 7. **Webhooks.** Register the deployed receiver URL with the platform; capture the `psig_…`
@@ -114,9 +130,10 @@ structure, a guard, legal, clinical, or claims — route it.**
    owned DNS gets the admin panel's record set verbatim; Cloudflare zones stay DNS-only).
 9. **Live smoke (the acceptance).** On the deployed URL: ① brand tokens render, zero unmarked
    placeholders ② ASSIGNED offerings render (empty ⇒ assign in admin) ③ the intake walk advances
-   with the offering's paired questions ④ checkout per the fork's era (stub renders honestly, or
-   live checkout mints a session on test cards) ⑤ webhook event verified ⑥ evidence: URLs +
-   screenshots per leg + named failure states hit.
+   with the offering's paired questions ④ checkout per the fork's era (pre-wake tags render the
+   honest STUB; WI-084-and-later tags compose the handoff — `PURPLE_MEMBER_PORTAL_BASE` set ⇒ it
+   lands on the real hosted door and a test card confirms; unset ⇒ the mock simulation) ⑤ webhook
+   event verified ⑥ evidence: URLs + screenshots per leg + named failure states hit.
 
 ## The tells table (diagnose, don't guess)
 
@@ -130,9 +147,12 @@ structure, a guard, legal, clinical, or claims — route it.**
 | Webhook signature rejects | wrong/rotated `psig_…` secret | re-register / env |
 | Build fails on copy-guard | unmarked filler or an endpoint literal | fix content, never the guard |
 | Placeholder copy renders | a marked slot unfilled | brand config |
+| "This checkout link isn't complete" | no `offering_ref` resolvable (no entry param, no configured default) | entry link / `NEXT_PUBLIC_PURPLE_OFFERING_REF` |
+| Checkout hands off to the mock simulation in live mode | `PURPLE_MEMBER_PORTAL_BASE` unset | kit env |
+| Hosted checkout asks for health questions on a buy-first link | expected — no `sku_id`/`therapy` source exists yet; this is the honest lock state, not a bug | platform (no public fix side today) |
 
 ## Handoff evidence
 
-Fork URL (tag noted) + deployed URL + domain dig output + `npm run verify` green + the nine
+Fork URL (tag noted) + deployed URL + domain dig output + `npm run verify` green + the six live
 smoke items with screenshots + the brand-config slot inventory filled + any platform-column
 findings and customization requests routed upstream.
