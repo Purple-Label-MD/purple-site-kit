@@ -141,10 +141,22 @@ async function answerNode(page) {
 
 async function main() {
   console.log(`parity: starting next on ${BASE} (mode=${MODE}, expect=${EXPECT_ACCENT}) …`);
+  // detached ⇒ own process group, so shutdown can kill the npx wrapper AND the
+  // next server it spawns. Killing only the wrapper orphans the server, which
+  // holds the port and makes the NEXT parity run audit the WRONG brand build
+  // (seen as EADDRINUSE + an accent mismatch on the retheme step in CI).
   const server = spawn("npx", ["next", "start", "-p", PORT], {
     stdio: ["ignore", "inherit", "inherit"],
     env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
+    detached: true,
   });
+  const killServer = (signal) => {
+    try {
+      process.kill(-server.pid, signal); // whole group (npx + next)
+    } catch {
+      server.kill(signal); // group already gone or platform quirk
+    }
+  };
   let browser;
   try {
     if (!(await waitReady())) throw new Error("server not ready");
@@ -312,9 +324,9 @@ async function main() {
     fails.push(`harness error — ${e instanceof Error ? e.message : String(e)}`);
   } finally {
     if (browser) await browser.close();
-    server.kill("SIGTERM");
+    killServer("SIGTERM");
     await sleep(400);
-    if (!server.killed) server.kill("SIGKILL");
+    killServer("SIGKILL");
   }
 
   for (const o of oks) console.log(`  ✓ ${o}`);
