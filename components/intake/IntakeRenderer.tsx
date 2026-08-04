@@ -298,8 +298,14 @@ function NodeView({
 }) {
   const [locked, setLocked] = useState(false);
   const options = useMemo(() => optionsOf(node), [node]);
-  const isSingle = node.control === "single_select";
-  const isMulti = node.control === "multi_select";
+  // Live edge control vocabulary (see member-portal intake-walk.tsx): the gateway emits
+  // `single_select_cards` / `multi_select_cards` / `search_select`, not the mock's bare
+  // `single_select` / `multi_select`. Treat the card variants as their select kind.
+  const isSingle = node.control === "single_select" || node.control === "single_select_cards";
+  const isMulti =
+    node.control === "multi_select" ||
+    node.control === "multi_select_cards" ||
+    node.control === "search_select";
   const isDisplay = node.kind === "display" || !node.control;
 
   // single-select: tap → highlight → confirm dwell → auto-advance (input locked).
@@ -443,6 +449,11 @@ function controlHasValue(node: RenderedNode, draft: Draft): boolean {
     case "number_pair":
       return draft.pairLo.trim() !== "" && draft.pairHi.trim() !== "";
     case "text":
+    case "long_text":
+    case "number":
+    case "scale":
+    case "date":
+    case "phone":
       return draft.value.trim() !== "";
     case "email":
       return /.+@.+\..+/.test(draft.value.trim());
@@ -458,7 +469,10 @@ function controlHasValue(node: RenderedNode, draft: Draft): boolean {
 function buildAnswer(node: RenderedNode, draft: Draft): AnswerValue | undefined {
   switch (node.control) {
     case "single_select":
+    case "single_select_cards":
     case "multi_select":
+    case "multi_select_cards":
+    case "search_select":
       return { codes: draft.codes };
     case "number_pair": {
       const lo = Number(draft.pairLo);
@@ -467,6 +481,11 @@ function buildAnswer(node: RenderedNode, draft: Draft): AnswerValue | undefined 
       return { pair: [lo, hi] };
     }
     case "text":
+    case "long_text":
+    case "number":
+    case "scale":
+    case "date":
+    case "phone":
       return { value: draft.value };
     case "email":
       return { value: draft.value, confirmed: node.prefill === "confirm" ? true : undefined };
@@ -513,10 +532,23 @@ function FormControl({
         </div>
       );
     case "text":
+    case "long_text":
       return (
         <textarea
           className="pl-field"
           rows={3}
+          value={draft.value}
+          onChange={(e) => setDraft({ ...draft, value: e.target.value })}
+        />
+      );
+    case "number":
+    case "scale":
+    case "date":
+    case "phone":
+      return (
+        <input
+          className="pl-field"
+          type={node.control === "date" ? "date" : node.control === "phone" ? "tel" : "number"}
           value={draft.value}
           onChange={(e) => setDraft({ ...draft, value: e.target.value })}
         />
