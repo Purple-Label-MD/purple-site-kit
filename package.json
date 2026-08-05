@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Purple SITE-KIT — LAUNCH archetype: fork-and-own single-condition client starter (Next.js/Vercel-class). Distributable product, not platform code.",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "engines": {
     "node": ">=20.11"
   },
