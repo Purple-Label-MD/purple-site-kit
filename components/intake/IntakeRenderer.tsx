@@ -500,6 +500,7 @@ function controlHasValue(node: RenderedNode, draft: Draft): boolean {
     case "address":
       return !!draft.addressSuggestionId;
     case "file":
+    case "file_capture":
       return !!draft.uploadRef;
     default:
       return true;
@@ -537,6 +538,7 @@ function buildAnswer(node: RenderedNode, draft: Draft): AnswerValue | undefined 
         ? { address: { suggestion_id: draft.addressSuggestionId } }
         : {};
     case "file":
+    case "file_capture":
       return draft.uploadRef
         ? { media: { upload_ref: draft.uploadRef, content_type: "image/png" } }
         : {};
@@ -611,9 +613,18 @@ function FormControl({
     case "address":
       return <AddressControl draft={draft} setDraft={setDraft} />;
     case "file":
+    case "file_capture":
       return <FileControl draft={draft} setDraft={setDraft} media={node.media} />;
     default:
-      return null;
+      // Fail LOUD, never blank: an unknown control must tell the visitor and
+      // the operator that something is wrong (the greyed-Next dead end has
+      // bitten three times: unknown vocabulary, footer overlap, silent 422s).
+      return (
+        <p className="pl-issue" role="alert">
+          This question type ({node.control}) can&rsquo;t be displayed yet. Please use the
+          &ldquo;Contact us&rdquo; link above and we&rsquo;ll help you continue.
+        </p>
+      );
   }
 }
 
