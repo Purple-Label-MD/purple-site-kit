@@ -87,6 +87,9 @@ export interface InstrumentStep {
   status: InstrumentStatus;
   node?: RenderedNode | null;
   flags?: string[];
+  /** Live edge shape: progress rides the STEP as an object; the mock's legacy
+      shape is a bare fraction on the node. The renderer accepts both. */
+  progress?: { scope?: string; position_estimate?: number };
   issues?: ControlIssue[];
   handoff?: EntryHandoff;
 }

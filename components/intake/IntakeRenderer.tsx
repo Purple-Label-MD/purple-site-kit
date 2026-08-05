@@ -239,7 +239,15 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
 
   const complete = step.status === "complete";
   const abandoned = step.status === "abandoned";
-  const pct = complete ? 100 : Math.round((node?.progress ?? 0) * 100);
+  // The live edge sends progress on the STEP ({position_estimate}); the mock's
+  // legacy shape is a bare fraction on the node — accept both.
+  const serverProgress =
+    typeof step?.progress?.position_estimate === "number"
+      ? step.progress.position_estimate
+      : typeof node?.progress === "number"
+        ? node.progress
+        : 0;
+  const pct = complete ? 100 : Math.round(serverProgress * 100);
   const canBack = pos > 0 && !complete && !abandoned;
 
   return (
