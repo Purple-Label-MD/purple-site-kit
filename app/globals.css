@@ -309,8 +309,17 @@ nav.site-nav .links {
 .pl-stage {
   max-width: 640px;
   margin: 0 auto;
-  padding: 28px 20px 140px;
+  padding: 28px 20px 48px;
   overflow-x: clip;
+}
+/* Server-sent rejection copy (never authored client-side) — a rejected answer
+   must be visible, not a silent re-serve of the same question. */
+.pl-issue {
+  margin: 0 0 14px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #b3261e;
 }
 /* The entry slide lives on an INNER wrapper (.pl-node-anim), never on the
    node that contains the fixed .pl-footer: an animated transform makes the
@@ -464,13 +473,16 @@ nav.site-nav .links {
 .pl-suggest button:hover {
   background: var(--pl-accent-tint);
 }
+/* Sticky-in-flow, not viewport-fixed: on a short question the pill sits right
+   under the field; on a long one it pins to the viewport bottom while
+   scrolling, then docks at the end. Kills the desktop dead-space gulf without
+   losing always-visible gating on long nodes. */
 .pl-footer {
-  position: fixed;
-  left: 0;
-  right: 0;
+  position: sticky;
   bottom: 0;
+  margin-top: 24px;
   background: linear-gradient(transparent, var(--pl-canvas) 42%);
-  padding: 18px 20px 26px;
+  padding: 18px 0 26px;
 }
 .pl-continue {
   display: block;
