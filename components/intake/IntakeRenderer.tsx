@@ -31,6 +31,7 @@ import {
 import type {
   AddressSuggestion,
   AnswerValue,
+  ControlIssue,
   InstrumentStep,
   RenderedNode,
 } from "@/lib/purple/types";
@@ -170,7 +171,16 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
           visibleIssues.length === data.issues?.length ? data : { ...data, issues: visibleIssues };
         setVisited((v) => {
           const next = v.slice(0, pos + 1);
-          next.push({ step: shownStep, draft: seedDraft(shownStep.node) });
+          // A rejection re-serves the SAME node with issues — keep the typed
+          // draft so the visitor can correct it instead of retyping.
+          const rejected =
+            visibleIssues.length > 0 &&
+            !!shownStep.node?.node_id &&
+            shownStep.node.node_id === v[pos]?.step.node?.node_id;
+          next.push({
+            step: shownStep,
+            draft: rejected ? v[pos].draft : seedDraft(shownStep.node),
+          });
           return next;
         });
         leftKeyRef.current[pos] = answerKey;
@@ -265,6 +275,7 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
           ) : node ? (
             <NodeView
               node={node}
+              issues={step.issues}
               draft={draft}
               setDraft={setDraft}
               busy={busy}
@@ -283,6 +294,7 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
 
 function NodeView({
   node,
+  issues,
   draft,
   setDraft,
   busy,
@@ -291,6 +303,7 @@ function NodeView({
   onAdvance,
 }: {
   node: RenderedNode;
+  issues?: ControlIssue[];
   draft: Draft;
   setDraft: (d: Draft) => void;
   busy: boolean;
@@ -334,6 +347,14 @@ function NodeView({
           .pl-node-anim in globals.css for why). */}
       <div className="pl-node-anim">
         <h1 className="pl-headline">{headlineOf(node)}</h1>
+
+        {issues?.length
+          ? issues.map((issue) => (
+              <p key={`${issue.code}:${issue.message}`} className="pl-issue" role="alert">
+                {issue.message || "Please review your answer."}
+              </p>
+            ))
+          : null}
 
         {isSingle || isMulti ? (
           <div
@@ -456,11 +477,17 @@ function controlHasValue(node: RenderedNode, draft: Draft): boolean {
       return draft.pairLo.trim() !== "" && draft.pairHi.trim() !== "";
     case "text":
     case "long_text":
-    case "number":
-    case "scale":
-    case "date":
     case "phone":
       return draft.value.trim() !== "";
+    case "number":
+    case "scale":
+      return Number.isFinite(Number(draft.value)) && draft.value.trim() !== "";
+    case "date": {
+      // Gate on a REAL calendar date; birth facts must also be in the past.
+      const iso = dateDisplayToIso(draft.value);
+      if (!iso) return false;
+      return node.fact?.includes("birth") ? iso <= new Date().toISOString().slice(0, 10) : true;
+    }
     case "email":
       return /.+@.+\..+/.test(draft.value.trim());
     case "address":
@@ -488,11 +515,14 @@ function buildAnswer(node: RenderedNode, draft: Draft): AnswerValue | undefined 
     }
     case "text":
     case "long_text":
-    case "number":
-    case "scale":
-    case "date":
     case "phone":
       return { value: draft.value };
+    case "number":
+    case "scale":
+      return { value: Number(draft.value) };
+    case "date":
+      // The wire format stays ISO (what <input type="date"> submitted before).
+      return { value: dateDisplayToIso(draft.value) ?? draft.value };
     case "email":
       return { value: draft.value, confirmed: node.prefill === "confirm" ? true : undefined };
     case "address":
@@ -514,6 +544,7 @@ function FormControl({
   setDraft,
 }: {
   node: RenderedNode;
+  issues?: ControlIssue[];
   draft: Draft;
   setDraft: (d: Draft) => void;
 }) {
@@ -549,16 +580,18 @@ function FormControl({
       );
     case "number":
     case "scale":
-    case "date":
     case "phone":
       return (
         <input
           className="pl-field"
-          type={node.control === "date" ? "date" : node.control === "phone" ? "tel" : "number"}
+          type={node.control === "phone" ? "tel" : "number"}
+          inputMode={node.control === "phone" ? "tel" : "decimal"}
           value={draft.value}
           onChange={(e) => setDraft({ ...draft, value: e.target.value })}
         />
       );
+    case "date":
+      return <DateControl node={node} draft={draft} setDraft={setDraft} />;
     case "email":
       return (
         <input
@@ -685,4 +718,64 @@ function CompleteView({ step, offering }: { step: InstrumentStep; offering?: str
       </p>
     </>
   );
+}
+
+/**
+ * Masked MM/DD/YYYY date entry. Typed, numeric keypad on mobile — never the
+ * native picker (a calendar is hostile for dates decades in the past, and the
+ * native popup is unstyled browser chrome). The wire format stays ISO.
+ */
+function DateControl({
+  node,
+  draft,
+  setDraft,
+}: {
+  node: RenderedNode;
+  draft: Draft;
+  setDraft: (d: Draft) => void;
+}) {
+  const display = /^\d{4}-\d{2}-\d{2}$/.test(draft.value)
+    ? isoToDateDisplay(draft.value)
+    : draft.value;
+  return (
+    <input
+      className="pl-field"
+      type="text"
+      inputMode="numeric"
+      autoComplete={node.fact?.includes("birth") ? "bday" : "off"}
+      placeholder="MM/DD/YYYY"
+      maxLength={10}
+      value={display}
+      onChange={(e) => setDraft({ ...draft, value: formatDateDisplay(e.target.value) })}
+    />
+  );
+}
+
+/** Progressive MM/DD/YYYY mask over digit input. */
+function formatDateDisplay(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
+function isoToDateDisplay(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${m}/${d}/${y}`;
+}
+
+/** MM/DD/YYYY → ISO, or null unless it is a REAL calendar date (1900+). */
+function dateDisplayToIso(display: string): string | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(display.trim());
+  if (!m) return null;
+  const [, mm, dd, yyyy] = m;
+  const year = Number(yyyy);
+  const month = Number(mm);
+  const day = Number(dd);
+  if (year < 1900) return null;
+  const dt = new Date(Date.UTC(year, month - 1, day));
+  if (dt.getUTCFullYear() !== year || dt.getUTCMonth() !== month - 1 || dt.getUTCDate() !== day) {
+    return null;
+  }
+  return `${yyyy}-${mm}-${dd}`;
 }
