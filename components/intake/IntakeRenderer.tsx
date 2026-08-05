@@ -105,6 +105,9 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
         cache: "no-store",
       });
       const data = (await res.json()) as InstrumentStep;
+      // A gateway 5xx returns JSON without a session — surface the error state
+      // instead of an eternal "Loading…".
+      if (!res.ok || !data.session_id) throw new Error(`resolve failed (${res.status})`);
       sessionRef.current = data.session_id;
       leftKeyRef.current = [];
       setVisited([{ step: data, draft: seedDraft(data.node) }]);
@@ -145,7 +148,11 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session_id: sid, answer }),
     });
-    return (await res.json()) as InstrumentStep;
+    const data = (await res.json()) as InstrumentStep;
+    // 4xx answer rejections ride the step's `issues` and are rendered; a 5xx
+    // has no step to show — throw to the "try again" error state (draft kept).
+    if (!res.ok && res.status >= 500) throw new Error(`next failed (${res.status})`);
+    return data;
   }, []);
 
   const advanceServer = useCallback(
