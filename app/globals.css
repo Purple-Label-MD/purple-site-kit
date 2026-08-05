@@ -312,7 +312,12 @@ nav.site-nav .links {
   padding: 28px 20px 140px;
   overflow-x: clip;
 }
-.pl-node {
+/* The entry slide lives on an INNER wrapper (.pl-node-anim), never on the
+   node that contains the fixed .pl-footer: an animated transform makes the
+   node a containing block for fixed descendants, which pins the Next pill to
+   the node instead of the viewport — on short single-field questions it lands
+   on top of the input. */
+.pl-node-anim {
   animation: pl-in var(--pl-slide-ms, 240ms) ease both;
 }
 @keyframes pl-in {
@@ -496,7 +501,7 @@ nav.site-nav .links {
   color: #9a9aa0;
 }
 @media (prefers-reduced-motion: reduce) {
-  .pl-node {
+  .pl-node-anim {
     animation: none;
   }
   .pl-bar > i,

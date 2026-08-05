@@ -253,7 +253,9 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
             <CompleteView step={step} offering={offeringRef} />
           ) : abandoned ? (
             <>
-              <h1 className="pl-headline">This session was marked abandoned.</h1>
+              <div className="pl-node-anim">
+                <h1 className="pl-headline">This session was marked abandoned.</h1>
+              </div>
               <div className="pl-footer">
                 <button type="button" className="pl-continue" onClick={loadFirst}>
                   Start over
@@ -328,60 +330,64 @@ function NodeView({
 
   return (
     <>
-      <h1 className="pl-headline">{headlineOf(node)}</h1>
+      {/* Animated content wrapper — the fixed .pl-footer stays OUTSIDE it (see
+          .pl-node-anim in globals.css for why). */}
+      <div className="pl-node-anim">
+        <h1 className="pl-headline">{headlineOf(node)}</h1>
 
-      {isSingle || isMulti ? (
-        <div
-          className="pl-options"
-          role={isMulti ? "group" : "radiogroup"}
-          aria-label={headlineOf(node)}
-        >
-          {options.map((opt, i) => {
-            const checked = draft.codes.includes(opt.code);
-            return (
-              <button
-                type="button"
-                key={opt.code}
-                className="pl-card"
-                data-code={opt.code}
-                role={isMulti ? "checkbox" : "radio"}
-                aria-checked={checked}
-                disabled={locked}
-                onClick={() => (isMulti ? toggle(opt.code) : pickSingle(opt.code))}
-              >
-                <span>
-                  {opt.label ?? opt.code}
-                  {opt.sub ? <span className="pl-sub">{opt.sub}</span> : null}
-                </span>
-                {isMulti ? (
-                  <span className="pl-check" aria-hidden="true">
-                    <svg viewBox="0 0 16 16">
-                      <title>selected</title>
-                      <path d="M2.5 8.5l3.5 3.5 7-8" />
-                    </svg>
+        {isSingle || isMulti ? (
+          <div
+            className="pl-options"
+            role={isMulti ? "group" : "radiogroup"}
+            aria-label={headlineOf(node)}
+          >
+            {options.map((opt, i) => {
+              const checked = draft.codes.includes(opt.code);
+              return (
+                <button
+                  type="button"
+                  key={opt.code}
+                  className="pl-card"
+                  data-code={opt.code}
+                  role={isMulti ? "checkbox" : "radio"}
+                  aria-checked={checked}
+                  disabled={locked}
+                  onClick={() => (isMulti ? toggle(opt.code) : pickSingle(opt.code))}
+                >
+                  <span>
+                    {opt.label ?? opt.code}
+                    {opt.sub ? <span className="pl-sub">{opt.sub}</span> : null}
                   </span>
-                ) : (
-                  <span className="pl-kbd" aria-hidden="true">
-                    {i + 1}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      ) : isDisplay ? (
-        <p className="pl-why">{node.copy}</p>
-      ) : (
-        <div className="pl-options">
-          <FormControl node={node} draft={draft} setDraft={setDraft} />
-        </div>
-      )}
+                  {isMulti ? (
+                    <span className="pl-check" aria-hidden="true">
+                      <svg viewBox="0 0 16 16">
+                        <title>selected</title>
+                        <path d="M2.5 8.5l3.5 3.5 7-8" />
+                      </svg>
+                    </span>
+                  ) : (
+                    <span className="pl-kbd" aria-hidden="true">
+                      {i + 1}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ) : isDisplay ? (
+          <p className="pl-why">{node.copy}</p>
+        ) : (
+          <div className="pl-options">
+            <FormControl node={node} draft={draft} setDraft={setDraft} />
+          </div>
+        )}
 
-      {node.prefill === "confirm" ? (
-        <p className="pl-why" style={{ fontSize: 13 }}>
-          Prefilled from your link — confirm or edit before continuing.
-        </p>
-      ) : null}
+        {node.prefill === "confirm" ? (
+          <p className="pl-why" style={{ fontSize: 13 }}>
+            Prefilled from your link — confirm or edit before continuing.
+          </p>
+        ) : null}
+      </div>
 
       {/* Number-key select for card questions (hidden chip on touch, per CSS). */}
       {isSingle || isMulti ? (
