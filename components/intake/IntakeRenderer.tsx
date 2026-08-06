@@ -488,6 +488,7 @@ function controlHasValue(node: RenderedNode, draft: Draft): boolean {
       return draft.value.trim() !== "";
     case "number":
     case "scale":
+      if (node.fact === "height_in") return heightDisplayToInches(draft.value) !== null;
       return Number.isFinite(Number(draft.value)) && draft.value.trim() !== "";
     case "date": {
       // Gate on a REAL calendar date; birth facts must also be in the past.
@@ -527,7 +528,12 @@ function buildAnswer(node: RenderedNode, draft: Draft): AnswerValue | undefined 
       return { value: draft.value };
     case "number":
     case "scale":
-      return { value: Number(draft.value) };
+      return {
+        value:
+          node.fact === "height_in"
+            ? (heightDisplayToInches(draft.value) ?? Number(draft.value))
+            : Number(draft.value),
+      };
     case "date":
       // The wire format stays ISO (what <input type="date"> submitted before).
       return { value: dateDisplayToIso(draft.value) ?? draft.value };
@@ -589,12 +595,14 @@ function FormControl({
       );
     case "number":
     case "scale":
+      if (node.fact === "height_in") return <HeightControl draft={draft} setDraft={setDraft} />;
+      return <UnitNumberControl node={node} draft={draft} setDraft={setDraft} />;
     case "phone":
       return (
         <input
           className="pl-field"
-          type={node.control === "phone" ? "tel" : "number"}
-          inputMode={node.control === "phone" ? "tel" : "decimal"}
+          type="tel"
+          inputMode="tel"
           value={draft.value}
           onChange={(e) => setDraft({ ...draft, value: e.target.value })}
         />
@@ -796,4 +804,107 @@ function dateDisplayToIso(display: string): string | null {
     return null;
   }
   return `${yyyy}-${mm}-${dd}`;
+}
+
+/** Unit suffixes by served fact — presentation only, the wire stays numeric. */
+const UNIT_BY_FACT: Record<string, string> = { weight_lb: "lbs" };
+
+function UnitNumberControl({
+  node,
+  draft,
+  setDraft,
+}: {
+  node: RenderedNode;
+  draft: Draft;
+  setDraft: (d: Draft) => void;
+}) {
+  const unit = node.fact ? UNIT_BY_FACT[node.fact] : undefined;
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        className="pl-field"
+        type="number"
+        inputMode="decimal"
+        value={draft.value}
+        onChange={(e) => setDraft({ ...draft, value: e.target.value })}
+        style={unit ? { paddingRight: 64 } : undefined}
+      />
+      {unit ? (
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            right: 20,
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "#9a9aa0",
+            fontSize: 16,
+            fontWeight: 600,
+            pointerEvents: "none",
+          }}
+        >
+          {unit}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Masked feet/inches entry for fact height_in — type digits, read 5' 10".
+ * The wire value stays TOTAL INCHES (unchanged contract). Deleting a mask
+ * character deletes a digit, so backspace behaves normally.
+ */
+function HeightControl({ draft, setDraft }: { draft: Draft; setDraft: (d: Draft) => void }) {
+  // A bare 2–3 digit value only arrives via prefill (typed input is always
+  // formatted immediately) — treat it as total inches.
+  const display = /^\d{2,3}$/.test(draft.value)
+    ? inchesToHeightDisplay(Number(draft.value))
+    : draft.value;
+  const digits = display.replace(/\D/g, "");
+  return (
+    <>
+      <input
+        className="pl-field"
+        type="text"
+        inputMode="numeric"
+        placeholder={"5' 10\""}
+        maxLength={7}
+        value={display}
+        onChange={(e) => {
+          const raw = e.target.value;
+          let d = raw.replace(/\D/g, "").slice(0, 3);
+          if (raw.length < display.length && d === digits) d = d.slice(0, -1);
+          setDraft({ ...draft, value: formatHeightDisplay(d) });
+        }}
+      />
+      <p className="pl-why" style={{ fontSize: 13 }}>
+        Just type the digits — 5 then 10 reads 5&rsquo; 10&rdquo;.
+      </p>
+    </>
+  );
+}
+
+function formatHeightDisplay(digits: string): string {
+  if (!digits) return "";
+  const feet = digits[0];
+  let inches = digits.slice(1, 3);
+  if (inches.length === 2 && Number(inches) > 11) inches = inches[0];
+  if (!inches) return `${feet}'`;
+  return `${feet}' ${inches}"`;
+}
+
+function inchesToHeightDisplay(total: number): string {
+  if (!Number.isFinite(total) || total <= 0) return "";
+  return `${Math.floor(total / 12)}' ${Math.round(total % 12)}"`;
+}
+
+/** 5' 10" → 70, or null unless feet 1–8 and inches 0–11. */
+function heightDisplayToInches(display: string): number | null {
+  const m = /^(\d)' (\d{1,2})"$/.exec(display.trim());
+  if (!m) return null;
+  const feet = Number(m[1]);
+  const inches = Number(m[2]);
+  if (feet < 1 || feet > 8 || inches > 11) return null;
+  return feet * 12 + inches;
 }
