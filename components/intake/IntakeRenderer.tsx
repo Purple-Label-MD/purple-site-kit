@@ -481,6 +481,7 @@ function controlHasValue(node: RenderedNode, draft: Draft): boolean {
   if (!node.required) return true;
   switch (node.control) {
     case "number_pair":
+      if (node.fact === "height_in") return heightDisplayToInches(draft.value) !== null;
       return draft.pairLo.trim() !== "" && draft.pairHi.trim() !== "";
     case "text":
     case "long_text":
@@ -517,6 +518,10 @@ function buildAnswer(node: RenderedNode, draft: Draft): AnswerValue | undefined 
     case "search_select":
       return { codes: draft.codes };
     case "number_pair": {
+      // height_in submits TOTAL INCHES as one value even when served as
+      // number_pair — the server computes BMI from a single clean number.
+      if (node.fact === "height_in")
+        return { value: heightDisplayToInches(draft.value) ?? Number(draft.value) };
       const lo = Number(draft.pairLo);
       const hi = Number(draft.pairHi);
       if (Number.isNaN(lo) || Number.isNaN(hi)) return {};
@@ -565,6 +570,7 @@ function FormControl({
 }) {
   switch (node.control) {
     case "number_pair":
+      if (node.fact === "height_in") return <HeightControl draft={draft} setDraft={setDraft} />;
       return (
         <div style={{ display: "flex", gap: 12 }}>
           <input
