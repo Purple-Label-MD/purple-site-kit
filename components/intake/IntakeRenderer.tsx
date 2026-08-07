@@ -240,6 +240,7 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
 
   const complete = step.status === "complete";
   const abandoned = step.status === "abandoned";
+  const blocked = step.status === "blocked";
   // The live edge sends progress on the STEP ({position_estimate}); the mock's
   // legacy shape is a bare fraction on the node — accept both.
   const serverProgress =
@@ -249,7 +250,7 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
         ? node.progress
         : 0;
   const pct = complete ? 100 : Math.round(serverProgress * 100);
-  const canBack = pos > 0 && !complete && !abandoned;
+  const canBack = pos > 0 && !complete && !abandoned && !blocked;
 
   return (
     <>
@@ -281,6 +282,29 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
             <>
               <div className="pl-node-anim">
                 <h1 className="pl-headline">This session was marked abandoned.</h1>
+              </div>
+              <div className="pl-footer">
+                <button type="button" className="pl-continue" onClick={loadFirst}>
+                  Start over
+                </button>
+              </div>
+            </>
+          ) : blocked ? (
+            // status:"blocked" serves no node (e.g. consent_declined) — without
+            // this branch a decline would strand the patient on "Loading…".
+            <>
+              <div className="pl-node-anim">
+                <h1 className="pl-headline">
+                  {step.blocked?.code === "consent_declined"
+                    ? "You declined the consent."
+                    : "We can’t continue this intake."}
+                </h1>
+                <p className="pl-why">
+                  {step.blocked?.code === "consent_declined"
+                    ? "Without this consent we can’t provide care through this site. If you change your mind, you can start over any time — or "
+                    : "This session can’t proceed. You can start over, or "}
+                  <a href="/contact">contact us</a> with questions.
+                </p>
               </div>
               <div className="pl-footer">
                 <button type="button" className="pl-continue" onClick={loadFirst}>

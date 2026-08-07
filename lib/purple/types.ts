@@ -7,7 +7,15 @@
 
 // ── Intake (edge.yaml /instrument/*) ──────────────────────────────────────────
 
-export type InstrumentStatus = "active" | "complete" | "abandoned";
+export type InstrumentStatus = "active" | "complete" | "abandoned" | "blocked";
+
+/** status:"blocked" detail — e.g. a declined consent halts the flow (WI-214). */
+export interface BlockedInfo {
+  code: string;
+  node_id?: string;
+  ungranted_scopes?: string[];
+  support_route?: string;
+}
 
 /**
  * A rendered option in the ratified INT-A-09 presentation model: a STABLE code plus
@@ -97,6 +105,7 @@ export interface InstrumentStep {
   journey_id: string;
   status: InstrumentStatus;
   node?: RenderedNode | null;
+  blocked?: BlockedInfo;
   flags?: string[];
   /** Live edge shape: progress rides the STEP as an object; the mock's legacy
       shape is a bare fraction on the node. The renderer accepts both. */
