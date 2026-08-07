@@ -52,6 +52,9 @@ export interface RenderedNode {
   /** Brand theme/copy overlay ride-along — presentation only. */
   theme?: Record<string, unknown>;
   copy?: string;
+  /** Display-node presentation content: headline/body plus namespaced keys
+   *  (e.g. `offering.<ref>.name` on offer interstitials). */
+  content?: { headline?: string; body?: string } & Record<string, string | undefined>;
   media?: MediaConfig;
 }
 
