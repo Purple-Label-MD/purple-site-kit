@@ -403,7 +403,11 @@ function NodeView({
             })}
           </div>
         ) : isDisplay ? (
-          <p className="pl-why">{node.copy}</p>
+          // Body text under the headline; when content.headline already owns
+          // the h1, don't repeat bare `copy` here.
+          (node.content?.body ?? (node.content?.headline ? undefined : node.copy)) ? (
+            <p className="pl-why">{node.content?.body ?? node.copy}</p>
+          ) : null
         ) : (
           <div className="pl-options">
             <FormControl node={node} draft={draft} setDraft={setDraft} />
@@ -474,7 +478,9 @@ function KeyboardSelect({
 }
 
 function headlineOf(node: RenderedNode): string {
-  return node.copy ?? node.node_id;
+  // Display interstitials carry the served copy under content.headline; the
+  // node_id fallback is a last resort for nodes served with no copy at all.
+  return node.content?.headline ?? node.copy ?? node.node_id;
 }
 
 function controlHasValue(node: RenderedNode, draft: Draft): boolean {
