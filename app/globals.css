@@ -500,6 +500,13 @@ nav.site-nav .links {
   text-decoration: none;
   transition: opacity 150ms ease;
 }
+/* The completion CTA is an <a>, not a <button>: host-page anchor rules of
+   (0,1,1)+ specificity (e.g. a brand wrapper's `.mdx a { color }`) would
+   repaint its label. Outrank them so the pill label stays legible. */
+.pl-footer a.pl-continue,
+a.pl-continue {
+  color: #fff;
+}
 .pl-continue:disabled {
   background: #dedcd6;
   color: #98968f;
