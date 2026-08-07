@@ -7,7 +7,15 @@
 
 // ── Intake (edge.yaml /instrument/*) ──────────────────────────────────────────
 
-export type InstrumentStatus = "active" | "complete" | "abandoned";
+export type InstrumentStatus = "active" | "complete" | "abandoned" | "blocked";
+
+/** status:"blocked" detail — e.g. a declined consent halts the flow (WI-214). */
+export interface BlockedInfo {
+  code: string;
+  node_id?: string;
+  ungranted_scopes?: string[];
+  support_route?: string;
+}
 
 /**
  * A rendered option in the ratified INT-A-09 presentation model: a STABLE code plus
@@ -29,7 +37,7 @@ export interface RenderedOption {
 /** RenderedNode — PRESENTATION ONLY. The client never owns sequence/controls/order. */
 export interface RenderedNode {
   node_id: string;
-  kind: "question" | "display";
+  kind: "question" | "display" | "consent";
   section_id: string;
   control?: string;
   fact?: string;
@@ -52,9 +60,17 @@ export interface RenderedNode {
   /** Brand theme/copy overlay ride-along — presentation only. */
   theme?: Record<string, unknown>;
   copy?: string;
-  /** Display-node presentation content: headline/body plus namespaced keys
-   *  (e.g. `offering.<ref>.name` on offer interstitials). */
-  content?: { headline?: string; body?: string } & Record<string, string | undefined>;
+  /** Display/consent presentation content: headline/body plus namespaced keys
+   *  (e.g. `offering.<ref>.name` on offer interstitials) and, on kind:"consent",
+   *  the affirmation_label the patient explicitly agrees to (WI-214). */
+  content?: { headline?: string; body?: string; affirmation_label?: string } & Record<
+    string,
+    string | undefined
+  >;
+  /** kind:"consent" — the version string echoed back in the ConsentAck answer. */
+  consent_version?: string;
+  /** kind:"consent" — what the affirmation grants (e.g. "treatment"). */
+  grants?: string[];
   media?: MediaConfig;
 }
 
@@ -89,6 +105,7 @@ export interface InstrumentStep {
   journey_id: string;
   status: InstrumentStatus;
   node?: RenderedNode | null;
+  blocked?: BlockedInfo;
   flags?: string[];
   /** Live edge shape: progress rides the STEP as an object; the mock's legacy
       shape is a bare fraction on the node. The renderer accepts both. */

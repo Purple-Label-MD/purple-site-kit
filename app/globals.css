@@ -396,7 +396,8 @@ nav.site-nav .links {
   margin-top: 3px;
 }
 /* selected: accent border + filled check — interior STAYS white (depth, not wash) */
-.pl-card[aria-checked="true"] {
+.pl-card[aria-checked="true"],
+.pl-card[aria-pressed="true"] {
   border: 2px solid var(--pl-accent);
   padding: 21px 23px;
   background: var(--pl-surface);
@@ -412,7 +413,8 @@ nav.site-nav .links {
   place-items: center;
   transition: all 120ms ease;
 }
-.pl-card[aria-checked="true"] .pl-check {
+.pl-card[aria-checked="true"] .pl-check,
+.pl-card[aria-pressed="true"] .pl-check {
   background: var(--pl-accent);
   border-color: var(--pl-accent);
 }
@@ -425,7 +427,8 @@ nav.site-nav .links {
   opacity: 0;
   transition: opacity 100ms ease;
 }
-.pl-card[aria-checked="true"] .pl-check svg {
+.pl-card[aria-checked="true"] .pl-check svg,
+.pl-card[aria-pressed="true"] .pl-check svg {
   opacity: 1;
 }
 .pl-kbd {
@@ -512,6 +515,20 @@ a.pl-continue {
   color: #98968f;
   cursor: default;
 }
+/* Quiet, explicit decline on kind:"consent" — visible but never competing
+   with the affirmation card. */
+.pl-consent-decline {
+  display: block;
+  margin: 14px auto 0;
+  padding: 6px 10px;
+  border: 0;
+  background: none;
+  color: #9a9aa0;
+  font: 500 13.5px var(--pl-font);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .pl-disclaimer {
   max-width: 640px;
   margin: 26px auto 0;

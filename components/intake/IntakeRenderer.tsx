@@ -45,6 +45,7 @@ type Draft = {
   addressSuggestionId?: string;
   addressLabel?: string;
   uploadRef?: string;
+  consentAffirmed?: boolean;
 };
 
 const EMPTY_DRAFT: Draft = { codes: [], value: "", pairLo: "", pairHi: "" };
@@ -239,6 +240,7 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
 
   const complete = step.status === "complete";
   const abandoned = step.status === "abandoned";
+  const blocked = step.status === "blocked";
   // The live edge sends progress on the STEP ({position_estimate}); the mock's
   // legacy shape is a bare fraction on the node — accept both.
   const serverProgress =
@@ -248,7 +250,7 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
         ? node.progress
         : 0;
   const pct = complete ? 100 : Math.round(serverProgress * 100);
-  const canBack = pos > 0 && !complete && !abandoned;
+  const canBack = pos > 0 && !complete && !abandoned && !blocked;
 
   return (
     <>
@@ -280,6 +282,29 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
             <>
               <div className="pl-node-anim">
                 <h1 className="pl-headline">This session was marked abandoned.</h1>
+              </div>
+              <div className="pl-footer">
+                <button type="button" className="pl-continue" onClick={loadFirst}>
+                  Start over
+                </button>
+              </div>
+            </>
+          ) : blocked ? (
+            // status:"blocked" serves no node (e.g. consent_declined) — without
+            // this branch a decline would strand the patient on "Loading…".
+            <>
+              <div className="pl-node-anim">
+                <h1 className="pl-headline">
+                  {step.blocked?.code === "consent_declined"
+                    ? "You declined the consent."
+                    : "We can’t continue this intake."}
+                </h1>
+                <p className="pl-why">
+                  {step.blocked?.code === "consent_declined"
+                    ? "Without this consent we can’t provide care through this site. If you change your mind, you can start over any time — or "
+                    : "This session can’t proceed. You can start over, or "}
+                  <a href="/contact">contact us</a> with questions.
+                </p>
               </div>
               <div className="pl-footer">
                 <button type="button" className="pl-continue" onClick={loadFirst}>
@@ -336,7 +361,8 @@ function NodeView({
     node.control === "multi_select" ||
     node.control === "multi_select_cards" ||
     node.control === "search_select";
-  const isDisplay = node.kind === "display" || !node.control;
+  const isConsent = node.kind === "consent";
+  const isDisplay = !isConsent && (node.kind === "display" || !node.control);
 
   // single-select: tap → highlight → confirm dwell → auto-advance (input locked).
   function pickSingle(code: string) {
@@ -352,9 +378,11 @@ function NodeView({
     setDraft({ ...draft, codes: toggleMulti(draft.codes, node, code) });
   }
 
-  const footerEnabled = isMulti
-    ? isContinueEnabled(node, draft.codes.length)
-    : controlHasValue(node, draft);
+  const footerEnabled = isConsent
+    ? !!draft.consentAffirmed
+    : isMulti
+      ? isContinueEnabled(node, draft.codes.length)
+      : controlHasValue(node, draft);
 
   return (
     <>
@@ -410,6 +438,14 @@ function NodeView({
               );
             })}
           </div>
+        ) : isConsent ? (
+          <ConsentControl
+            node={node}
+            draft={draft}
+            setDraft={setDraft}
+            busy={busy}
+            onAdvance={onAdvance}
+          />
         ) : isDisplay ? (
           // Body text under the headline; when content.headline already owns
           // the h1, don't repeat bare `copy` here.
@@ -446,9 +482,17 @@ function NodeView({
             type="button"
             className="pl-continue"
             disabled={busy || !footerEnabled}
-            onClick={() => onAdvance(isDisplay ? undefined : buildAnswer(node, draft))}
+            onClick={() =>
+              onAdvance(
+                isConsent
+                  ? { consent: { acknowledged: true, version: node.consent_version } }
+                  : isDisplay
+                    ? undefined
+                    : buildAnswer(node, draft),
+              )
+            }
           >
-            {isDisplay ? "Continue" : "Next"}
+            {isDisplay || isConsent ? "Continue" : "Next"}
           </button>
         </div>
       ) : null}
@@ -824,6 +868,64 @@ function dateDisplayToIso(display: string): string | null {
     return null;
   }
   return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
+ * kind:"consent" (WI-214): the served body plus an affirmation card the
+ * patient explicitly toggles before Continue submits the documented
+ * ConsentAck — {consent: {acknowledged: true, version}}. Decline is an
+ * equally explicit action ({acknowledged: false}); the server owns whatever
+ * comes next. The kit renders served copy only and never authors consent
+ * language.
+ */
+function ConsentControl({
+  node,
+  draft,
+  setDraft,
+  busy,
+  onAdvance,
+}: {
+  node: RenderedNode;
+  draft: Draft;
+  setDraft: (d: Draft) => void;
+  busy: boolean;
+  onAdvance: (a?: AnswerValue) => void;
+}) {
+  const affirmed = !!draft.consentAffirmed;
+  return (
+    <>
+      {node.content?.body ? <p className="pl-why">{node.content.body}</p> : null}
+      <div className="pl-options">
+        {/* A lone affirmation is a toggle button, not a checkbox group — the
+            pressed state carries the same accent-check styling. */}
+        <button
+          type="button"
+          className="pl-card"
+          aria-pressed={affirmed}
+          disabled={busy}
+          onClick={() => setDraft({ ...draft, consentAffirmed: !affirmed })}
+        >
+          <span>{node.content?.affirmation_label ?? "I agree."}</span>
+          <span className="pl-check" aria-hidden="true">
+            <svg viewBox="0 0 16 16">
+              <title>selected</title>
+              <path d="M2.5 8.5l3.5 3.5 7-8" />
+            </svg>
+          </span>
+        </button>
+      </div>
+      <button
+        type="button"
+        className="pl-consent-decline"
+        disabled={busy}
+        onClick={() =>
+          onAdvance({ consent: { acknowledged: false, version: node.consent_version } })
+        }
+      >
+        I don&rsquo;t consent
+      </button>
+    </>
+  );
 }
 
 /** Unit suffixes by served fact — presentation only, the wire stays numeric. */
