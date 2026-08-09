@@ -510,6 +510,13 @@ nav.site-nav .links {
 a.pl-continue {
   color: #fff;
 }
+/* Same interference on hover: a brand's `a:hover { opacity }` dims the whole
+   filled pill, which reads as disabled. The button variant has no hover dim —
+   the anchor keeps parity. */
+.pl-footer a.pl-continue:hover,
+a.pl-continue:hover {
+  opacity: 1;
+}
 .pl-continue:disabled {
   background: #dedcd6;
   color: #98968f;
