@@ -45,6 +45,26 @@ Copy `.env.example` to `.env.local` and fill it in (never commit it):
 | `PURPLE_API_KEY` | Server-only per-client M2M key (`Authorization: Bearer …`). Never exposed to the browser. |
 | `PURPLE_WEBHOOK_SECRET` | Server-only HMAC secret for verifying inbound webhook signatures. |
 
+### Your welcome pack → these variables
+
+If you were onboarded with a Purple **welcome pack**, its items map onto this kit as
+follows. Every row is verified against the kit's code; items the kit does not read
+are marked honestly so you know they belong to the rest of your integration.
+
+| Welcome-pack item | Kit env var | What it does |
+| --- | --- | --- |
+| **API base URL** (already includes `/v1`) | `NEXT_PUBLIC_PURPLE_API_BASE` | Paste it as-is — do **not** append another `/v1`. Every gateway request is built from it (`lib/config.ts` → `apiBase()`); setting it switches the kit from the built-in mock to live mode. |
+| **API key** | `PURPLE_API_KEY` | This exact name — the kit reads `PURPLE_API_KEY`, not `PURPLE_CLIENT_API_KEY` or any other spelling. Presented server-side as `Authorization: Bearer …` on every live call (`lib/purple/client.ts`); never `NEXT_PUBLIC_`-prefixed, never reaches the browser. |
+| **Offering ref(s)** | `NEXT_PUBLIC_PURPLE_OFFERING_REF` | Set one ref as the default: the entry-link composer (`lib/purple/entry-links.ts`) preselects it on intake entry links, and the checkout handoff forwards it as `offering_ref`. Got several refs? Keep the rest in your brand/catalog config (`lib/brand/`, `lib/catalog/`) and pass one per link via `EntryContext.offering`. |
+| **Member-portal origin** | `PURPLE_MEMBER_PORTAL_BASE` | The platform-hosted checkout's **origin** (no `/v1`, no path — the opposite convention from the API base). The `/checkout` handoff link is composed against it; leave it unset to keep the credential-free mock-checkout walk. |
+| **Checkout entry mode** | — *not read by the kit* | Provided for your integration, not read by the kit. It tells you how the hosted checkout sequences payment vs. clinical review for your brand. Kit-side, pick the matching funnel entry in your brand config (`funnelMode: "quiz-first"` or `"buy-first"` on a GROWTH brand); the handoff composer (`lib/purple/checkout-links.mjs`) supports journey-bound and offering-only entry either way. |
+| **`{{CLIENT_DOMAIN}}` placeholder** | — *not read by the kit* | Provided for your integration, not read by the kit. Wherever a pack value carries `{{CLIENT_DOMAIN}}`, substitute the domain this fork actually deploys on (e.g. redirect/return URLs, the webhook endpoint URL you register). |
+
+Two variables the pack does **not** carry, because they are your fork's own choices:
+`NEXT_PUBLIC_PURPLE_BRAND_ID` (which brand config under `lib/brand/` this build uses)
+and `PURPLE_WEBHOOK_SECRET` (the `psig_…` secret shown once when *you* register a
+webhook endpoint). `NEXT_PUBLIC_PURPLE_MOCK` is a local override only.
+
 **Zero hardcoded endpoints.** Every Purple call resolves its base URL from
 `lib/config.ts`, which reads it from the environment. The copy-guard fails the build
 if an absolute API URL literal ever appears in code. The browser never calls the
