@@ -76,6 +76,15 @@ which attach the key server-side.
 > acceptance walkthrough (entry link → full intake → checkout handoff → webhook events)
 > runs against the live gateway at that point.
 
+### Handing the build to an agent or contractor
+
+Not building the site yourself? [`AGENT-BRIEF.md`](AGENT-BRIEF.md) is a ready-to-hand
+brief for a developer, contractor, or AI agent: fill in its placeholders from your
+welcome pack, put the API key in the builder's environment as `PURPLE_API_KEY`, and
+hand it over verbatim. It walks the whole job — mock-first bring-up, branding,
+pricing, questions, domain, and the live end-to-end proof — and specifies the
+deliverables to expect back.
+
 ## The fork-and-own contract
 
 1. **Fork a released tag, not `main`-tip.** Releases are versioned; `main` moves.
