@@ -19,20 +19,37 @@ export default function AboutPage() {
         <div className="container">
           <div className="eyebrow">About</div>
           <h1>About {brand.name}</h1>
-          <PlaceholderNote>
-            company identity + mission — replace with real, verifiable details
-          </PlaceholderNote>
-          <p style={{ maxWidth: 640 }}>
-            This is placeholder About copy. State clearly who operates this service, the
-            relationship between the technology platform and the independent medical practice, and
-            how patients reach a human. Entity/identity transparency is a certification-readiness
-            element.
-          </p>
-          <ul className="muted">
-            <li>[Legal operating entity name + address slot]</li>
-            <li>[Platform-vs-medical-practice separation disclosure slot]</li>
-            <li>[Contact + support channel slot]</li>
-          </ul>
+          {brand.aboutBody?.length ? (
+            <>
+              {brand.aboutBody.map((para) => (
+                <p key={para.slice(0, 40)} style={{ maxWidth: 640 }}>
+                  {para}
+                </p>
+              ))}
+              {brand.contact?.supportEmail ? (
+                <p className="muted">
+                  Reach a human any time: <a href="/contact">{brand.contact.supportEmail}</a>
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <PlaceholderNote>
+                company identity + mission — replace with real, verifiable details
+              </PlaceholderNote>
+              <p style={{ maxWidth: 640 }}>
+                This is placeholder About copy. State clearly who operates this service, the
+                relationship between the technology platform and the independent medical practice,
+                and how patients reach a human. Entity/identity transparency is a
+                certification-readiness element.
+              </p>
+              <ul className="muted">
+                <li>[Legal operating entity name + address slot]</li>
+                <li>[Platform-vs-medical-practice separation disclosure slot]</li>
+                <li>[Contact + support channel slot]</li>
+              </ul>
+            </>
+          )}
         </div>
       </section>
       <ClinicianBios brand={brand} />

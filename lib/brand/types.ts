@@ -130,6 +130,22 @@ export interface BrandConfig {
   tagline: string;
   logo: LogoSlot;
   theme: ThemeTokens;
+  /**
+   * True once the brand's MERCHANDISING copy is real, reviewed content — hides the
+   * template's PLACEHOLDER scaffolding notes on merchandising surfaces. Counsel
+   * banners and legal-slot placeholders are NEVER affected by this flag (legal
+   * review is a separate, counsel-gated deliverable).
+   */
+  contentReviewed?: boolean;
+  /** Real contact details; each slot keeps its marked placeholder when absent. */
+  contact?: {
+    supportEmail?: string;
+    phone?: string;
+    address?: string;
+    hours?: string;
+  };
+  /** Real About-page body paragraphs; the template placeholder renders when absent. */
+  aboutBody?: string[];
   /** Archetype this brand drives (default "launch" when omitted). */
   archetype?: Archetype;
   /**

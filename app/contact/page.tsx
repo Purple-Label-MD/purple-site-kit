@@ -18,15 +18,27 @@ export default function ContactPage() {
         <div className="container">
           <div className="eyebrow">Contact</div>
           <h1>Contact {brand.name}</h1>
-          <PlaceholderNote>
-            real contact details are required before launch and for certification
-          </PlaceholderNote>
+          {!brand.contentReviewed ? (
+            <PlaceholderNote>
+              real contact details are required before launch and for certification
+            </PlaceholderNote>
+          ) : null}
           <CounselBanner topic="contact + entity disclosure surface" />
           <ul>
-            <li>Support email: [support@example — placeholder]</li>
-            <li>Phone: [phone — placeholder]</li>
-            <li>Mailing address: [operating entity address — placeholder]</li>
-            <li>Hours / response window: [placeholder]</li>
+            <li>
+              Support email:{" "}
+              {brand.contact?.supportEmail ? (
+                <a href={`mailto:${brand.contact.supportEmail}`}>{brand.contact.supportEmail}</a>
+              ) : (
+                "[support@example — placeholder]"
+              )}
+            </li>
+            <li>Phone: {brand.contact?.phone ?? "[phone — placeholder]"}</li>
+            <li>
+              Mailing address:{" "}
+              {brand.contact?.address ?? "[operating entity address — placeholder]"}
+            </li>
+            <li>Hours / response window: {brand.contact?.hours ?? "[placeholder]"}</li>
           </ul>
           <p className="muted">
             A reachable contact surface with a real operating entity is a certification-readiness

@@ -3,12 +3,19 @@ import type { CSSProperties } from "react";
 import "./globals.css";
 import { getActiveBrand, themeVars } from "@/lib/brand";
 
-export const metadata: Metadata = {
-  title: "Purple SITE-KIT — LAUNCH starter (placeholder)",
-  description:
-    "Fork-and-own single-condition starter template. Placeholder content — replace before launch.",
-  robots: { index: false, follow: false },
-};
+function rootMetadata(): Metadata {
+  const brand = getActiveBrand();
+  return {
+    title: brand.contentReviewed ? brand.name : "Purple SITE-KIT — LAUNCH starter (placeholder)",
+    description: brand.contentReviewed
+      ? brand.tagline
+      : "Fork-and-own single-condition starter template. Placeholder content — replace before launch.",
+    // Dev-environment deploy stays noindex; flip alongside the production launch.
+    robots: { index: false, follow: false },
+  };
+}
+
+export const metadata: Metadata = rootMetadata();
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const brand = getActiveBrand();
