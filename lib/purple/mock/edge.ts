@@ -33,7 +33,12 @@ interface Session {
   test?: boolean;
 }
 
-const SESSIONS = new Map<string, Session>();
+// Anchored on globalThis so Next dev-mode module reloads (compiling another route
+// mid-flow) don't wipe in-flight sessions — mockNext would silently re-mint from
+// the intro otherwise. Process-memory either way; never a production store.
+const SESSIONS: Map<string, Session> = ((
+  globalThis as { __plMockSessions?: Map<string, Session> }
+).__plMockSessions ??= new Map<string, Session>());
 
 function rid(prefix: string): string {
   const rand = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-x`;
