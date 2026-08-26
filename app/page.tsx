@@ -20,9 +20,11 @@ export function generateMetadata(): Metadata {
   const isGrowth = brand.archetype === "growth" && brand.growth;
   return pageMetadata({
     title: "Home",
-    description: isGrowth
-      ? `${brand.name} — a multi-audience storefront over one program catalog. Placeholder scaffolding; replace before launch.`
-      : `${brand.name} — ${brand.condition.name}. Placeholder single-condition starter; replace before launch.`,
+    description: brand.contentReviewed
+      ? brand.tagline
+      : isGrowth
+        ? `${brand.name} — a multi-audience storefront over one program catalog. Placeholder scaffolding; replace before launch.`
+        : `${brand.name} — ${brand.condition.name}. Placeholder single-condition starter; replace before launch.`,
   });
 }
 
@@ -47,9 +49,11 @@ export default function HomePage() {
           <p className="muted" style={{ maxWidth: 620, fontSize: 18 }}>
             {c.heroSub}
           </p>
-          <div style={{ marginTop: 8 }}>
-            <PlaceholderNote>hero copy is scaffolding — replace before launch</PlaceholderNote>
-          </div>
+          {!brand.contentReviewed ? (
+            <div style={{ marginTop: 8 }}>
+              <PlaceholderNote>hero copy is scaffolding — replace before launch</PlaceholderNote>
+            </div>
+          ) : null}
           <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
             <a className="btn" href={entryLink()}>
               {brand.copy.cta_primary}
@@ -59,8 +63,12 @@ export default function HomePage() {
             </a>
           </div>
           <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
-            Entry mode: <strong>{brand.entryMode}</strong> (set per brand). Eligibility is decided
-            during clinician review; you may not be suitable.
+            {!brand.contentReviewed ? (
+              <>
+                Entry mode: <strong>{brand.entryMode}</strong> (set per brand).{" "}
+              </>
+            ) : null}
+            Eligibility is decided during clinician review; you may not be suitable.
           </p>
         </div>
       </section>

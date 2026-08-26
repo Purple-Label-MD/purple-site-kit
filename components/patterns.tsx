@@ -58,17 +58,23 @@ export function SkuLadder({ brand }: { brand: BrandConfig }) {
   return (
     <section className="section" aria-label="Options">
       <div className="container">
-        <SectionHeading eyebrow="Options" title="Two placeholder options" />
-        <PlaceholderNote>
-          pricing + product copy are slots — never ship real medication or price content unreviewed
-        </PlaceholderNote>
+        <SectionHeading
+          eyebrow="Options"
+          title={brand.copy.sku_ladder_title ?? "Two placeholder options"}
+        />
+        {!brand.contentReviewed ? (
+          <PlaceholderNote>
+            pricing + product copy are slots — never ship real medication or price content
+            unreviewed
+          </PlaceholderNote>
+        ) : null}
         <div className="grid grid--2" style={{ marginTop: 12 }}>
           {brand.skus.map((sku) => (
             <div key={sku.id} className="card">
               <div className="eyebrow">{sku.roleLabel}</div>
               <h3 style={{ margin: "4px 0" }}>{sku.name}</h3>
               <p className="muted" style={{ margin: "0 0 8px" }}>
-                Placeholder molecule: {sku.placeholderMolecule}
+                {brand.copy.sku_molecule_label ?? "Placeholder molecule:"} {sku.placeholderMolecule}
               </p>
               <p style={{ margin: "0 0 8px" }}>{sku.benefit}</p>
               <div style={{ fontWeight: 700 }}>{sku.priceSlot}</div>
@@ -125,6 +131,8 @@ export function FaqBattery({ brand }: { brand: BrandConfig }) {
 
 /** Testimonials WITH results-vary discipline (the disclaimer is non-optional). */
 export function Testimonials({ brand }: { brand: BrandConfig }) {
+  // No genuine testimonials → no section. Never render fabricated social proof.
+  if (brand.testimonials.length === 0) return null;
   return (
     <section className="section" aria-label="What members say">
       <div className="container">
@@ -152,6 +160,8 @@ export function Testimonials({ brand }: { brand: BrandConfig }) {
 
 /** Clinician-bio SLOTS — the estate-wide leapfrog, first-class (Scope 3). */
 export function ClinicianBios({ brand }: { brand: BrandConfig }) {
+  // No verifiable roster yet → no section. Never render placeholder identities live.
+  if (brand.clinicians.length === 0) return null;
   return (
     <section className="section" aria-label="Our clinicians">
       <div className="container">
