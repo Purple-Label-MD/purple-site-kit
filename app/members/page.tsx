@@ -23,9 +23,11 @@ export default function MembersPage() {
         <div className="container">
           <div className="eyebrow">Members</div>
           <h1>Member sign in</h1>
-          <PlaceholderNote>
-            member portal is a slot — wire real destinations post-auth
-          </PlaceholderNote>
+          {!brand.contentReviewed ? (
+            <PlaceholderNote>
+              member portal is a slot — wire real destinations post-auth
+            </PlaceholderNote>
+          ) : null}
           <p className="muted" style={{ maxWidth: 620 }}>
             Sign-in uses hosted Universal Login (passwordless email, Google, or Apple). No patient
             password is ever collected here. On return, the callback starts a short-lived session.

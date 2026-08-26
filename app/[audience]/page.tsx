@@ -63,9 +63,11 @@ export default async function AudienceStorefront({
           <p className="muted" style={{ maxWidth: 640, fontSize: 18 }}>
             {audience.heroSub}
           </p>
-          <PlaceholderNote>
-            audience voice + hero are scaffolding — replace before launch
-          </PlaceholderNote>
+          {!brand.contentReviewed ? (
+            <PlaceholderNote>
+              audience voice + hero are scaffolding — replace before launch
+            </PlaceholderNote>
+          ) : null}
         </div>
       </section>
 
@@ -111,24 +113,28 @@ export default async function AudienceStorefront({
               </div>
             ))}
           </div>
-          <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
-            Peer-mirror casting: {audience.peerMirrorCasting}. Imagery: {audience.imagerySlot}
-          </p>
+          {!brand.contentReviewed ? (
+            <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
+              Peer-mirror casting: {audience.peerMirrorCasting}. Imagery: {audience.imagerySlot}
+            </p>
+          ) : null}
         </div>
       </section>
 
-      {/* Labs cross-sell teaser */}
-      <section className="section" aria-label="Labs">
-        <div className="container">
-          <div className="card">
-            <strong>Advanced lab diagnostics</strong>
-            <p className="muted" style={{ margin: "6px 0 0" }}>
-              Panels are sold as their own product line (marketing-complete; fulfillment wakes with
-              the labs lane). <a href="/labs">Explore labs →</a>
-            </p>
+      {/* Labs cross-sell teaser — only when the catalog actually ships lab panels */}
+      {growth.catalog.labPanels.length > 0 ? (
+        <section className="section" aria-label="Labs">
+          <div className="container">
+            <div className="card">
+              <strong>Advanced lab diagnostics</strong>
+              <p className="muted" style={{ margin: "6px 0 0" }}>
+                Panels are sold as their own product line (marketing-complete; fulfillment wakes
+                with the labs lane). <a href="/labs">Explore labs →</a>
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
     </GrowthShell>
   );
 }

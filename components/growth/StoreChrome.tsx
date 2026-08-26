@@ -38,7 +38,7 @@ export function GrowthNav({ brand, audience }: { brand: BrandConfig; audience: A
             </a>
           </div>
         </details>
-        <a href="/labs">Labs</a>
+        {growth.catalog.labPanels.length > 0 ? <a href="/labs">Labs</a> : null}
         <a href="/about">About</a>
         <a href="/faq">FAQ</a>
         {/* Audience switcher — the root split, from config */}
@@ -104,9 +104,11 @@ export function GrowthTopNav({ brand }: { brand: BrandConfig }) {
             {a.label}
           </a>
         ))}
-        <a href="/labs" style={{ fontWeight: 700 }}>
-          Labs
-        </a>
+        {growth.catalog.labPanels.length > 0 ? (
+          <a href="/labs" style={{ fontWeight: 700 }}>
+            Labs
+          </a>
+        ) : null}
         <a href="/about">About</a>
         <a href="/faq">FAQ</a>
         <a href="/members">{brand.copy.member_entry}</a>
