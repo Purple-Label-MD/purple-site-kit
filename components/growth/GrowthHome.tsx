@@ -20,7 +20,7 @@ export function GrowthHome({ brand }: { brand: BrandConfig }) {
           {brand.logo.wordmark}
         </a>
         <div className="links">
-          <a href="/labs">Labs</a>
+          {growth.catalog.labPanels.length > 0 ? <a href="/labs">Labs</a> : null}
           <a href="/about">About</a>
           <a href="/faq">FAQ</a>
           <a href="/contact">Contact</a>
@@ -37,9 +37,11 @@ export function GrowthHome({ brand }: { brand: BrandConfig }) {
             <p className="muted" style={{ maxWidth: 640, fontSize: 18 }}>
               {brand.condition.heroSub}
             </p>
-            <PlaceholderNote>
-              storefront landing copy is scaffolding — replace before launch
-            </PlaceholderNote>
+            {!brand.contentReviewed ? (
+              <PlaceholderNote>
+                storefront landing copy is scaffolding — replace before launch
+              </PlaceholderNote>
+            ) : null}
           </div>
         </section>
 
@@ -61,10 +63,12 @@ export function GrowthHome({ brand }: { brand: BrandConfig }) {
                 </a>
               ))}
             </div>
-            <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
-              One catalog, two lenses: shared programs appear in both; audience-exclusive lines
-              appear in exactly one. Never two catalogs, never a cloned SKU.
-            </p>
+            {!brand.contentReviewed ? (
+              <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
+                One catalog, two lenses: shared programs appear in both; audience-exclusive lines
+                appear in exactly one. Never two catalogs, never a cloned SKU.
+              </p>
+            ) : null}
           </div>
         </section>
 

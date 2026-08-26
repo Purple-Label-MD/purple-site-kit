@@ -81,11 +81,15 @@ export default async function OfferingPdp({
             {offering.whatItIs}
           </p>
           <p className="muted" style={{ margin: "4px 0 0" }}>
-            Placeholder molecule: {offering.placeholderMolecule}
+            {brand.contentReviewed
+              ? offering.placeholderMolecule
+              : `Placeholder molecule: ${offering.placeholderMolecule}`}
           </p>
-          <PlaceholderNote>
-            program copy + pricing are slots — never ship unreviewed
-          </PlaceholderNote>
+          {!brand.contentReviewed ? (
+            <PlaceholderNote>
+              program copy + pricing are slots — never ship unreviewed
+            </PlaceholderNote>
+          ) : null}
 
           {/* Supply-term ladder: the merchandising surface, default-expanded */}
           <div style={{ marginTop: 20 }}>
