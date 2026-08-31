@@ -270,6 +270,22 @@ with an owner and an expiry. That register is not a waiver list: an expired entr
 entry whose finding no longer reproduces is red (so it deletes itself once cured), and anything
 not listed is red immediately. The open count is printed on every run.
 
+**The verdict is four-valued, and `CLEAN` is not the same as green.** Because a registered gap is
+still a real finding, the exit code says so:
+
+| exit | verdict | meaning |
+| --- | --- | --- |
+| `0` | `CLEAN` | nothing reproduces — the only verdict that means *this kit conforms* |
+| `1` | `FAILED` | an unregistered violation, or a stale/expired register entry |
+| `2` | `JAMMED` | the instrument did not rule. Never a pass |
+| `3` | `OPEN-GAPS` | no new drift, but registered findings still reproduce |
+
+`npm run spec:contract` is **strict** — a caller that does nothing gets the truthful answer, since
+the dangerous consumer is the one that runs the command and believes exit `0`. Kit CI opts into
+the lenient form (`spec:contract:ci`, which passes `--allow-open-gaps`) explicitly. Any downstream
+conformance gate should use the strict form, or read the machine-readable record written by
+`--verdict-out <file>`.
+
 ## Security
 
 Keep dependencies patched (`npm audit`). This template does not use `next/image`, so

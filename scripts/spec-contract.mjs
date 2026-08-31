@@ -39,7 +39,7 @@
  *   node scripts/spec-contract.mjs --surface <file>      # check against another surface
  *   node scripts/spec-contract.mjs --root <dir>          # check another tree (the RED-first tests)
  */
-import { appendFileSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { appendFileSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { REPO_ROOT, SURFACE_PATH, isEntrypoint } from "./spec-surface.mjs";
 
@@ -755,7 +755,55 @@ export function runChecks({ root = REPO_ROOT, surface, contract = readContract(r
   const stale = gaps.filter((g) => !seenKeys.has(`${g.check}:${g.id}`));
 
   const ok = hard.length === 0 && stale.length === 0 && jams.length === 0;
-  return { ok, hard, open, stale, jams, examined, violations, census: called.census, surface };
+  // FOUR VERDICTS, AND `CLEAN` IS NOT THE SAME AS `OPEN-GAPS`.
+  //
+  // This matters more than it looks. A consumer downstream of this instrument — the walk's
+  // docs-current bar re-proves itself from this verdict rather than by hand — would otherwise read
+  // exit 0 and conclude "the kit conforms to the published spec," while six registered findings are
+  // still reproducing underneath. A green that masks known drift, promoted into a walk gate, is a
+  // worse failure than the drift itself. So the register's grace is visible IN THE VERDICT, and a
+  // caller has to opt into accepting it (`--allow-open-gaps`) rather than inherit it silently.
+  const verdict =
+    jams.length > 0 ? "JAMMED" : !ok ? "FAILED" : open.length > 0 ? "OPEN-GAPS" : "CLEAN";
+  return {
+    ok,
+    verdict,
+    hard,
+    open,
+    stale,
+    jams,
+    examined,
+    violations,
+    census: called.census,
+    surface,
+  };
+}
+
+/**
+ * The machine-readable verdict. Prose is for humans; this is what a downstream gate reads, so it
+ * carries the open-gap count explicitly — no consumer can accidentally treat "green with six
+ * registered findings" as "clean".
+ */
+export function verdictRecord(result) {
+  return {
+    verdict: result.verdict,
+    clean: result.verdict === "CLEAN",
+    counts: {
+      unregisteredViolations: result.hard.length,
+      staleRegisterEntries: result.stale.length,
+      openGaps: result.open.length,
+      jams: result.jams.length,
+    },
+    openGaps: result.open.map((v) => ({
+      check: v.check,
+      id: v.id,
+      owner: v.entry.owner ?? null,
+      expires: v.entry.expires ?? null,
+    })),
+    examined: result.examined,
+    surface: { source: result.surface.source, opCount: result.surface.opCount },
+    checkedAt: new Date().toISOString(),
+  };
 }
 
 export function formatReport(result) {
@@ -798,10 +846,9 @@ export function formatReport(result) {
     }
   }
   push("");
+  // One machine-greppable verdict line, always, in exactly one shape.
   push(
-    result.ok
-      ? `spec-contract OK${result.open.length > 0 ? ` (with ${result.open.length} registered open gap(s) — see above)` : ""}`
-      : "spec-contract FAILED",
+    `spec-contract verdict: ${result.verdict}${result.open.length > 0 ? ` (${result.open.length} registered open gap(s) — NOT clean)` : ""}`,
   );
   return lines.join("\n");
 }
@@ -824,8 +871,24 @@ export function summaryFor(result) {
   if (!result.ok)
     return `### ❌ spec-contract FAILED\n${result.hard.length} unregistered violation(s), ${result.stale.length} stale register entr(ies).\n\n${[...result.hard.map((v) => `- **${v.check}** — ${v.detail}`), ...result.stale.map((g) => `- **stale register entry** — \`${g.id}\` no longer reproduces; delete it`)].join("\n")}`;
   const gaps = result.open.length;
-  return `### ✅ spec-contract OK\nChecked ${result.examined.callSites} call site(s) and ${result.examined.docPathRefs} documented platform path(s) against ${result.surface.opCount} published operation(s).\n\n${gaps === 0 ? "No open gaps." : `**${gaps} registered open gap(s)** (owned elsewhere, expiring):\n${result.open.map((v) => `- \`${v.id}\` — owner ${v.entry.owner}, expires ${v.entry.expires}`).join("\n")}`}`;
+  const census = `Checked ${result.examined.callSites} call site(s) and ${result.examined.docPathRefs} documented platform path(s) against ${result.surface.opCount} published operation(s).`;
+  if (gaps === 0) return `### ✅ spec-contract CLEAN\n${census}\n\nNo open gaps.`;
+  return `### 🟡 spec-contract OPEN-GAPS — green, but **not clean**\n${census}\n\n**${gaps} registered finding(s) still reproducing** (owned elsewhere, expiring). A downstream gate must not read this as conformance:\n${result.open.map((v) => `- \`${v.id}\` — owner ${v.entry.owner}, expires ${v.entry.expires}`).join("\n")}`;
 }
+
+/**
+ * EXIT CODES — and the default is STRICT on purpose.
+ *
+ *   0  CLEAN      nothing reproduces. The only verdict that means "this kit conforms."
+ *   1  FAILED     an unregistered violation, or a stale/expired register entry.
+ *   2  JAMMED     the instrument did not rule. Never a pass.
+ *   3  OPEN-GAPS  no NEW drift, but registered findings are still reproducing.
+ *
+ * A caller that does nothing gets the strict answer, because the dangerous consumer is the one
+ * that just runs the command and believes exit 0. Kit CI opts into the lenient form explicitly
+ * with `--allow-open-gaps`; a downstream conformance gate must not.
+ */
+export const EXIT_CODES = { CLEAN: 0, FAILED: 1, JAMMED: 2, "OPEN-GAPS": 3 };
 
 if (isEntrypoint(import.meta.url)) {
   const argv = process.argv.slice(2);
@@ -835,6 +898,8 @@ if (isEntrypoint(import.meta.url)) {
   };
   const root = arg("--root", REPO_ROOT);
   const surfaceFile = arg("--surface", SURFACE_PATH);
+  const allowOpenGaps = argv.includes("--allow-open-gaps");
+  const verdictOut = arg("--verdict-out", null);
   let result;
   try {
     const surface = JSON.parse(readFileSync(surfaceFile, "utf8"));
@@ -847,9 +912,18 @@ if (isEntrypoint(import.meta.url)) {
   } catch (err) {
     console.error(`spec-contract JAMMED: ${err.message}`);
     writeStepSummary(`### 🚨 spec-contract JAMMED\n${err.message}`);
-    process.exit(1);
+    process.exit(EXIT_CODES.JAMMED);
   }
   console.log(formatReport(result));
   writeStepSummary(summaryFor(result));
-  process.exit(result.ok ? 0 : 1);
+  if (verdictOut)
+    writeFileSync(verdictOut, `${JSON.stringify(verdictRecord(result), null, 2)}\n`, "utf8");
+  const code = EXIT_CODES[result.verdict];
+  if (code === EXIT_CODES["OPEN-GAPS"] && allowOpenGaps) {
+    console.log(
+      "  (--allow-open-gaps: accepting a NOT-CLEAN verdict. A conformance gate must run without this flag.)",
+    );
+    process.exit(EXIT_CODES.CLEAN);
+  }
+  process.exit(code);
 }

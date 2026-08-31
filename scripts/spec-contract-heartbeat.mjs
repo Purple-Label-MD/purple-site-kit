@@ -91,15 +91,24 @@ export async function checkHeartbeat({
 
   if (successes.length === 0) {
     const bootstrapUntil = contract.liveVerificationBootstrapUntil;
-    if (bootstrapUntil && now.toISOString().slice(0, 10) <= bootstrapUntil) {
+    // THE GRACE COVERS "NOT WIRED YET", NEVER "WIRED AND FAILING".
+    //
+    // The bootstrap window exists for the gap between this instrument landing and its first run on
+    // main — a period when zero runs of any kind exist. The moment runs DO exist and none of them
+    // succeeded, we are looking at the exact failure this file was written to catch: a pipe that is
+    // red and staying red. Letting the bootstrap date excuse that would rebuild the silence.
+    const everRan = (runs ?? []).length > 0;
+    if (!everRan && bootstrapUntil && now.toISOString().slice(0, 10) <= bootstrapUntil) {
       return {
         verdict: HEARTBEAT.BOOTSTRAP,
-        detail: `no live verification has succeeded yet; inside the bootstrap window (until ${bootstrapUntil}). This grace EXPIRES on that date — after it, "never ran" is a jam.`,
+        detail: `the live-drift workflow has never run; inside the bootstrap window (until ${bootstrapUntil}). This grace EXPIRES on that date, and it does NOT cover a workflow that runs and fails.`,
       };
     }
     return {
       verdict: HEARTBEAT.JAMMED,
-      detail: `no successful ${LIVE_WORKFLOW_FILE} run exists${bootstrapUntil ? ` and the bootstrap window closed on ${bootstrapUntil}` : ""} — the live-drift guarantee has never actually held.`,
+      detail: everRan
+        ? `${LIVE_WORKFLOW_FILE} has run ${runs.length} time(s) and NEVER succeeded — the live-drift guarantee has never actually held, and the bootstrap grace does not cover a failing pipe.`
+        : `no ${LIVE_WORKFLOW_FILE} run exists${bootstrapUntil ? ` and the bootstrap window closed on ${bootstrapUntil}` : ""} — the live-drift guarantee has never actually held.`,
     };
   }
 

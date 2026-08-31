@@ -130,7 +130,20 @@
   "$bootstrapComment": [
     "The grace window between this instrument landing and its first successful live run. It is a",
     "DATE, not a flag, so it cannot be left on: after it, 'no live verification has ever succeeded'",
-    "is a jam like any other."
+    "is a jam like any other. It is set to the same date as the known-gaps expiries deliberately —",
+    "the live workflow cannot succeed until this lands on main, so a short window would turn a merge",
+    "delay into a bootstrap JAM on every unrelated PR, and somebody would debug it instead of",
+    "bumping it. One date, one review moment."
   ],
-  "liveVerificationBootstrapUntil": "2026-09-13"
+  "liveVerificationBootstrapUntil": "2026-10-15",
+  "$nonGoalsComment": [
+    "DELIBERATE NON-GOALS, named so the next reader does not assume they are covered:",
+    "  • This instrument never probes the GATEWAY HOST the published spec advertises in `servers`.",
+    "    It reads the published spec over HTTP and checks the kit against it. A `servers` host that",
+    "    resolves nowhere would pass every check here — reachability of the advertised host is the",
+    "    docs/platform lane's to assert, not the kit's, and it is not built.",
+    "  • The welcome pack's manifest is not yet diffed against this contract. The pack is emitted",
+    "    prose on the platform side; wiring its composer to fetch this file is the follow-on that",
+    "    closes the sixth restatement."
+  ]
 }

@@ -17,7 +17,7 @@ import { join } from "node:path";
 import { after, describe, it } from "node:test";
 import { HEARTBEAT, checkHeartbeat } from "./spec-contract-heartbeat.mjs";
 import { VERDICT, diffSurfaces, probeLive } from "./spec-contract-live.mjs";
-import { readContract, runChecks } from "./spec-contract.mjs";
+import { EXIT_CODES, readContract, runChecks, verdictRecord } from "./spec-contract.mjs";
 import { REPO_ROOT, deriveSurface, serializeSurface } from "./spec-surface.mjs";
 
 const SURFACE = JSON.parse(readFileSync(join(REPO_ROOT, "spec", "published-surface.json"), "utf8"));
@@ -337,6 +337,60 @@ describe("the register — loud, expiring, and self-retiring", () => {
     assert.ok(result.stale.some((g) => g.id === "code GET /v1/long-since-cured"));
   });
 
+  it("a green with open gaps is NOT reported as CLEAN — the verdict a downstream gate reads", () => {
+    const shipped = check(REPO_ROOT);
+    assert.ok(shipped.ok, "the shipped tree must not be failing");
+    assert.ok(shipped.open.length > 0, "this assertion is only meaningful while gaps are open");
+    assert.equal(shipped.verdict, "OPEN-GAPS");
+    assert.notEqual(shipped.verdict, "CLEAN");
+
+    const record = verdictRecord(shipped);
+    assert.equal(record.clean, false, "a conformance consumer must not read this as clean");
+    assert.equal(record.counts.openGaps, shipped.open.length);
+    assert.equal(
+      EXIT_CODES[shipped.verdict],
+      3,
+      "OPEN-GAPS must not share an exit code with CLEAN",
+    );
+    for (const gap of record.openGaps) {
+      assert.ok(gap.owner, `verdict record gap ${gap.id} carries no owner`);
+      assert.ok(gap.expires, `verdict record gap ${gap.id} carries no expiry`);
+    }
+  });
+
+  it("CLEAN is reachable, and only when the register is empty AND nothing reproduces", () => {
+    // Cure every registered finding at once, then empty the register. This is the state the kit
+    // reaches once the six rows are closed — and it is the ONLY state that verdicts CLEAN.
+    const root = fixture(({ edit, writeJson }) => {
+      edit("lib/purple/client.ts", (t) =>
+        t.replace(/\$\{apiBase\(\)\}\/tenants\/self/, "${apiBase()}/webhooks/event-types"),
+      );
+      edit(SKILL, (t) =>
+        t
+          .replace(
+            "`/catalog`, `/brands/{brand_id}/offerings`, and",
+            "the account-scoped configuration surface and",
+          )
+          .concat(
+            "\n\nThe wire field `journey_id` is what public prose calls the enrollment id.\n",
+          ),
+      );
+      edit("README.md", (t) =>
+        t.replace(
+          "## Two archetypes, three demo brands",
+          "The public entry-mode pair is question-first and pay-first; in this kit's frozen code they are the `funnelMode` values `quiz-first` and `buy-first` respectively. The default offering ref is `offering_launch_starter`.\n\n## Two archetypes, three demo brands",
+        ),
+      );
+      writeJson("known-gaps.json", { gaps: [] });
+    });
+    const result = check(root);
+    assert.deepEqual(result.hard, [], result.hard.map((v) => v.detail).join(" | "));
+    assert.deepEqual(result.stale, []);
+    assert.equal(result.verdict, "CLEAN");
+    assert.equal(EXIT_CODES[result.verdict], 0);
+    assert.equal(verdictRecord(result).clean, true);
+  });
+
   it("every open gap is reported with an owner and an expiry", () => {
     for (const gap of check(REPO_ROOT).open) {
       assert.ok(gap.entry.owner, `gap ${gap.id} has no owner`);
@@ -544,6 +598,20 @@ describe("the jam detector — a gate that stopped ruling is not a gate that pas
       listRuns: async () => [],
     });
     assert.equal(after.verdict, HEARTBEAT.JAMMED);
+  });
+
+  it("the bootstrap grace does NOT cover a workflow that runs and fails, even inside its window", async () => {
+    const insideWindowButFailing = await checkHeartbeat({
+      contract,
+      now: at("2026-09-01T00:00:00Z"), // comfortably inside liveVerificationBootstrapUntil
+      listRuns: async () => [{ conclusion: "failure", updated_at: "2026-08-31T23:00:00Z" }],
+    });
+    assert.equal(
+      insideWindowButFailing.verdict,
+      HEARTBEAT.JAMMED,
+      "a red-and-staying-red pipe is the exact jam this detector exists for; the bootstrap date must not excuse it",
+    );
+    assert.match(insideWindowButFailing.detail, /NEVER succeeded/);
   });
 
   it("JAMMED in CI without credentials — a detector that cannot read is never a graceful skip", async () => {

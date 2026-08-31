@@ -73,8 +73,13 @@ jobs:
         run: npm run spec:contract:test
 
       # The instrument itself, against the pinned published surface. Fail-closed.
+      #
+      # `spec:contract:ci` passes --allow-open-gaps, which accepts the OPEN-GAPS verdict (exit 3)
+      # for the findings registered in known-gaps.json. The BARE `npm run spec:contract` is STRICT
+      # and exits non-zero on those — that is the form a downstream conformance gate must use, so
+      # that "green in kit CI" can never be mistaken for "the kit conforms to the published spec".
       - name: Spec-contract (spec-anchored, fail-closed)
-        run: npm run spec:contract
+        run: npm run spec:contract:ci
 
       # THE JAM DETECTOR. A fail-closed gate that stops ruling is a silent lie — the
       # platform's own docs-projection sat red on main for days with publishing frozen and
