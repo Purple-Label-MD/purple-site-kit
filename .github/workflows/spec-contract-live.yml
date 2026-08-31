@@ -1,0 +1,55 @@
+name: spec-contract-live
+
+# WI-374 leg B — the kit's live-drift probe, mirroring the platform's `docs-live-drift`.
+#
+# The PR-time `spec-contract` step checks this repo against `spec/published-surface.json`, a
+# PINNED snapshot of what the Purple docs site publishes. A pin is only as true as the last time
+# somebody looked. This workflow is the looking: it fetches the spec the docs site is actually
+# serving, compares the derived surface to the pin, and re-runs the spec-anchored checks against
+# LIVE rather than against the pin.
+#
+# FOUR VERDICTS, KEPT DISTINCT (scripts/spec-contract-live.mjs owns the exit codes):
+#   0 OK                — live matches the pin and the kit conforms to it.
+#   1 CHECKS-FAILED     — live is reachable and matches, but this kit violates the live contract.
+#   2 LIVE-FETCH-FAILED — the live spec could not be read at all. Drift is UNPROVEN in either
+#                         direction. Never folded into "drift", never folded into "pass": "we
+#                         could not check" and "we checked and it is fine" are different facts.
+#   3 SURFACE-DRIFT     — the site answered and publishes a different surface than the pin claims.
+#
+# It runs on main AND on a schedule, because the schedule is what the PR-time jam detector
+# (scripts/spec-contract-heartbeat.mjs) measures: if this workflow stops concluding successfully,
+# every subsequent PR goes red with JAMMED rather than quietly inheriting a stale guarantee.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # daily, comfortably inside the freshness window declared in integration-contract.json
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spec-contract-live
+  cancel-in-progress: false
+
+jobs:
+  live-drift:
+    name: spec-contract-live
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      # No credentials: the published spec is public, exactly as an integrator sees it.
+      - name: Live-drift probe (drift, live-fetch failure and check failure named distinctly)
+        run: npm run spec:live

@@ -1,0 +1,67 @@
+{
+  "$comment": [
+    "THE OPEN-FINDINGS REGISTER — and it is not a waiver list.",
+    "",
+    "The audit that produced `scripts/spec-contract.mjs` (WI-374 leg A) found real drift between",
+    "this kit, the published API spec, and the welcome pack. The instrument that DETECTS that drift",
+    "must not also be the thing that CURES it — a checker that edits the documents it grades proves",
+    "nothing, and the findings below have owners outside this repo. Landing the instrument red on",
+    "main would be worse still: a red that nobody can act on is background noise inside a week, and",
+    "a gate people have learned to ignore has already failed.",
+    "",
+    "So every open finding is named, owned and DATED here, and the register is checked three ways on",
+    "every run (see `readKnownGaps` in scripts/spec-contract.mjs):",
+    "  • an entry past `expires` is RED — an unclosed gap becomes a decision, never a default;",
+    "  • an entry whose finding NO LONGER REPRODUCES is RED — the entry must be deleted, which is how",
+    "    this file empties itself and the check becomes fully enforcing;",
+    "  • anything NOT listed here is RED immediately, with no grace at all.",
+    "The count is printed on every run and in the job summary. Silence is the failure mode this whole",
+    "instrument exists to prevent; this file is loud on purpose.",
+    "",
+    "TO CLOSE A ROW: fix the finding, delete the entry, watch the check stay green."
+  ],
+  "gaps": [
+    {
+      "check": "called-path",
+      "id": "code GET /v1/tenants/self",
+      "owner": "purple-site-kit maintainers (WI-374 leg A, row B1)",
+      "expires": "2026-10-15",
+      "note": "lib/purple/client.ts exports tenantSelf(), which calls an operation the public spec does not publish. Nothing in the kit calls it — it is dead code, which is exactly why it survived four integrator walks unnoticed. Cure is a decision, not an edit: either the platform publishes GET /tenants/self as public, or the accessor comes out of the kit."
+    },
+    {
+      "check": "called-path",
+      "id": "docs ANY /v1/catalog",
+      "owner": "purple-site-kit maintainers (WI-374 leg A, row B2)",
+      "expires": "2026-10-15",
+      "note": "the bundled quickstart SKILL points an agent at /catalog as the platform's source of truth for product surfaces. That operation is x-audience:internal and is not on the public surface — an integrator following the skill calls something it cannot reach."
+    },
+    {
+      "check": "called-path",
+      "id": "docs ANY /v1/brands/{}/offerings",
+      "owner": "purple-site-kit maintainers (WI-374 leg A, row B2)",
+      "expires": "2026-10-15",
+      "note": "same line of the same skill file. The published account-scoped equivalent is /v1/account/brands/{brand_id}/offerings; the skill names the internal spelling."
+    },
+    {
+      "check": "claims",
+      "id": "env-default-undocumented NEXT_PUBLIC_PURPLE_OFFERING_REF",
+      "owner": "purple-site-kit maintainers (found by this instrument, D2 class)",
+      "expires": "2026-10-15",
+      "note": ".env.example ships the default `offering_launch_starter`, a value the README never mentions — so a fresh fork sends an offering ref no document told the integrator about. Sibling row NEXT_PUBLIC_PURPLE_BRAND_ID passes because its demo default IS stated in the README; this one is the same class, uncured."
+    },
+    {
+      "check": "claims",
+      "id": "C3-entry-mode-vocabulary README.md",
+      "owner": "docs/kit copy owner (Architect ruling C3, WI-374)",
+      "expires": "2026-10-15",
+      "note": "the entry-mode toggle is currently spelled four ways across the estate: funnelMode quiz-first|buy-first in kit code and README, questionnaire-first|direct-buy in AGENT-BRIEF.md, qualify-first|pay-first in the welcome pack the walk runner emits, and question-first|pay-first as the Architect-ruled PUBLIC pair. The code values are FROZEN (renaming breaks every fork), so the cure is one mapping sentence in the README — which is what this assertion demands."
+    },
+    {
+      "check": "claims",
+      "id": "E1-journey-id-noun .claude/skills/site-kit-quickstart/SKILL.md",
+      "owner": "docs/kit copy owner (Architect ruling E1, WI-374)",
+      "expires": "2026-10-15",
+      "note": "SKILL.md is where journey_id first meets a reader in this repo, and it never reconciles the frozen wire name with the public prose noun `enrollment`. One sentence closes it."
+    }
+  ]
+}

@@ -234,8 +234,57 @@ No six-gate platform apparatus here (no PHI, no money, no platform code). The la
   number-key select, gating) + a browser suite (`scripts/parity.mjs`, Playwright/Chromium:
   click→auto-advance, completion bar + Back, reduced-motion instant, and a settled
   computed-style audit) run on **both demo brands** (the tokens-only retheme proof).
+- **spec-contract** — the one check in this list that is *not* self-referential (below).
 
 PRs are **bot-authored; the founder merges** (enforced by branch protection).
+
+## spec-contract — the projection instrument
+
+Every other check above grades this repo against itself. `spec-contract` grades it against the
+**platform it integrates with**, because that is where the expensive drift lives: a called path
+the API no longer publishes, a base URL documented one way and built another, one concept with
+three names across the README, the bundled skill, the integrator brief and the welcome pack.
+Those are not typos — they are six hand-maintained restatements of one truth, and hand-maintained
+restatements drift. The fix is projection, not proofreading.
+
+- `integration-contract.json` states the truth **once** — env variables, the base-URL
+  conventions, and the claims that have wire consequences.
+- `spec/published-surface.json` pins what the Purple docs site actually publishes: the operation
+  set, the server origin and the version prefix. Refresh it with `npm run spec:pin`.
+- `npm run spec:contract` projects both onto the code and the docs and fails closed:
+  1. every platform path this kit **calls**, and every platform path its documents **tell you to
+     call**, exists in the published surface with that method;
+  2. the base-URL conventions hold end to end — on the spec side, at every call site, and in
+     every documented example. A doubled version prefix is a build failure;
+  3. the env table, its wire effects and the ruled reconciling sentences are executable checks.
+- `npm run spec:contract:test` proves each rule **RED-first** on a planted violation, on every run.
+- `.github/workflows/spec-contract-live.yml` re-runs the checks against the **live** published
+  spec on main and daily, keeping *drift*, *live-fetch failure* and *check failure* as three
+  distinct verdicts — "we could not check" is never reported as "there is no drift".
+- `npm run spec:heartbeat` is the **jam detector**: if no live verification has concluded inside
+  the freshness window, CI goes red with `JAMMED`. A fail-closed gate that quietly stops ruling
+  is worse than one that goes red, because nothing tells you the guarantee has lapsed.
+
+Open findings this instrument has detected but does not own are registered in `known-gaps.json`
+with an owner and an expiry. That register is not a waiver list: an expired entry is red, an
+entry whose finding no longer reproduces is red (so it deletes itself once cured), and anything
+not listed is red immediately. The open count is printed on every run.
+
+**The verdict is four-valued, and `CLEAN` is not the same as green.** Because a registered gap is
+still a real finding, the exit code says so:
+
+| exit | verdict | meaning |
+| --- | --- | --- |
+| `0` | `CLEAN` | nothing reproduces — the only verdict that means *this kit conforms* |
+| `1` | `FAILED` | an unregistered violation, or a stale/expired register entry |
+| `2` | `JAMMED` | the instrument did not rule. Never a pass |
+| `3` | `OPEN-GAPS` | no new drift, but registered findings still reproduce |
+
+`npm run spec:contract` is **strict** — a caller that does nothing gets the truthful answer, since
+the dangerous consumer is the one that runs the command and believes exit `0`. Kit CI opts into
+the lenient form (`spec:contract:ci`, which passes `--allow-open-gaps`) explicitly. Any downstream
+conformance gate should use the strict form, or read the machine-readable record written by
+`--verdict-out <file>`.
 
 ## Security
 
