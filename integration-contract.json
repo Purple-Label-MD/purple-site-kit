@@ -1,0 +1,136 @@
+{
+  "$comment": [
+    "THE KIT'S INTEGRATION CONTRACT — the single machine-readable declaration of everything an",
+    "integrator has to get right to point this fork at a real Purple gateway. Six documents used",
+    "to restate this by hand (README, .env.example, AGENT-BRIEF.md, the bundled SKILL.md, the",
+    "welcome pack, and the code itself); every one of them had drifted from at least one of the",
+    "others. This file is the source, `scripts/spec-contract.mjs` is the projector, and CI is the",
+    "wall. Change the truth HERE and let the checks tell you which document has not caught up.",
+    "",
+    "It is deliberately a data file with no prose obligations of its own: anything stated here is",
+    "asserted against the kit's code, its env template, and its published docs on every CI run.",
+    "It is also a PUBLIC, stable artifact of a public repo — the welcome-pack composer on the",
+    "platform side can fetch it and assert its own manifest against these names rather than",
+    "restating them a seventh time."
+  ],
+  "specSurface": "spec/published-surface.json",
+  "apiBase": {
+    "envVar": "NEXT_PUBLIC_PURPLE_API_BASE",
+    "accessor": "apiBase",
+    "includesVersionPrefix": true,
+    "convention": "origin + the published version prefix, no trailing slash — paste the welcome pack's value as-is"
+  },
+  "pageHostBases": [
+    {
+      "envVar": "PURPLE_MEMBER_PORTAL_BASE",
+      "accessor": "memberPortalBase",
+      "includesVersionPrefix": false,
+      "convention": "origin only — no version prefix, no path, no trailing slash (the opposite convention from the API base)"
+    }
+  ],
+  "env": [
+    {
+      "name": "NEXT_PUBLIC_PURPLE_API_BASE",
+      "scope": "public",
+      "source": "welcome-pack",
+      "documented": ["README", "env-example", "agent-brief", "skill"]
+    },
+    {
+      "name": "NEXT_PUBLIC_PURPLE_MOCK",
+      "scope": "public",
+      "source": "fork-local",
+      "documented": ["README", "env-example"]
+    },
+    {
+      "name": "NEXT_PUBLIC_PURPLE_BRAND_ID",
+      "scope": "public",
+      "source": "welcome-pack",
+      "documented": ["README", "env-example", "agent-brief", "skill"],
+      "wireEffect": {
+        "header": "X-Brand-Id",
+        "note": "sent on every live gateway call — a fork that leaves the demo default set authenticates as one tenant while asserting another"
+      }
+    },
+    {
+      "name": "NEXT_PUBLIC_PURPLE_OFFERING_REF",
+      "scope": "public",
+      "source": "welcome-pack",
+      "documented": ["README", "env-example", "agent-brief", "skill"]
+    },
+    {
+      "name": "PURPLE_MEMBER_PORTAL_BASE",
+      "scope": "server",
+      "source": "welcome-pack",
+      "documented": ["README", "env-example", "agent-brief", "skill"]
+    },
+    {
+      "name": "PURPLE_API_KEY",
+      "scope": "server",
+      "source": "welcome-pack",
+      "documented": ["README", "env-example", "agent-brief", "skill"]
+    },
+    {
+      "name": "PURPLE_WEBHOOK_SECRET",
+      "scope": "server",
+      "source": "fork-local",
+      "documented": ["README", "env-example", "skill"]
+    }
+  ],
+  "claims": [
+    {
+      "id": "C3-entry-mode-vocabulary",
+      "ruling": "Architect, WI-374: the PUBLIC entry-mode pair is question-first / pay-first. The kit's funnelMode CODE values (quiz-first | buy-first) are FROZEN — renaming them breaks every fork — so the README must carry one sentence mapping the two vocabularies.",
+      "kind": "reconciling-sentence",
+      "files": ["README.md"],
+      "codeTokens": ["quiz-first", "buy-first"],
+      "publicTokens": ["question-first", "pay-first"]
+    },
+    {
+      "id": "E1-journey-id-noun",
+      "ruling": "Architect, WI-374: journey_id is the FROZEN wire name and \"enrollment\" the public prose noun. The reconciling sentence is mandatory wherever the wire field first appears in reader-facing prose.",
+      "kind": "reconciling-sentence",
+      "files": ["README.md", "AGENT-BRIEF.md", ".claude/skills/site-kit-quickstart/SKILL.md"],
+      "codeTokens": ["journey_id"],
+      "publicTokens": ["enrollment"]
+    }
+  ],
+  "docs": {
+    "readme": "README.md",
+    "envExample": ".env.example",
+    "agentBrief": "AGENT-BRIEF.md",
+    "skill": ".claude/skills/site-kit-quickstart/SKILL.md",
+    "envTableHeading": "## Going live"
+  },
+  "callSiteGlobs": ["lib", "app", "components"],
+  "docPathScanFiles": [
+    "README.md",
+    "AGENT-BRIEF.md",
+    ".claude/skills/site-kit-quickstart/SKILL.md",
+    "docs/certification-readiness.md"
+  ],
+  "$minimaComment": [
+    "NON-VACUITY FLOOR. A checker that examines nothing passes everything — that is the exact",
+    "shape of a fail-closed gate that has silently jammed. Every check declares how many things it",
+    "examined and reds if the census falls below its floor, so 'the scanner stopped seeing call",
+    "sites' can never read as 'the call sites are all fine'."
+  ],
+  "minima": {
+    "callSites": 8,
+    "docPathRefs": 2,
+    "envVars": 7,
+    "publishedOps": 30
+  },
+  "$jamComment": [
+    "JAM DETECTION. A fail-closed gate that stops ruling is worse than one that goes red, because",
+    "nothing says so. `spec-contract-live` runs on kit main AND on a daily schedule; the PR-time",
+    "check asserts that a live verification concluded successfully inside this window. Past the",
+    "window the verdict is JAMMED — reported as loudly as DRIFT, and never as a pass."
+  ],
+  "liveVerificationFreshnessHours": 96,
+  "$bootstrapComment": [
+    "The grace window between this instrument landing and its first successful live run. It is a",
+    "DATE, not a flag, so it cannot be left on: after it, 'no live verification has ever succeeded'",
+    "is a jam like any other."
+  ],
+  "liveVerificationBootstrapUntil": "2026-09-13"
+}
