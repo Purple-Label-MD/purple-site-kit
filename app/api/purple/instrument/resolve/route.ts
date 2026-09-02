@@ -17,6 +17,7 @@ export async function GET(request: Request) {
     "promo",
     "redirect",
     "test",
+    "phase",
   ] as const;
   const params: ResolveParams = {};
   for (const k of keys) {

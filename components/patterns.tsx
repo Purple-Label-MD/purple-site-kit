@@ -137,7 +137,9 @@ export function Testimonials({ brand }: { brand: BrandConfig }) {
     <section className="section" aria-label="What members say">
       <div className="container">
         <SectionHeading eyebrow="Placeholder proof" title="What members say" />
-        <PlaceholderNote>use only genuine, permissioned testimonials</PlaceholderNote>
+        {!brand.contentReviewed ? (
+          <PlaceholderNote>use only genuine, permissioned testimonials</PlaceholderNote>
+        ) : null}
         <div className="grid grid--2" style={{ marginTop: 12 }}>
           {brand.testimonials.map((t, i) => (
             <blockquote key={`${t.attribution}-${i}`} className="card" style={{ margin: 0 }}>
@@ -166,9 +168,11 @@ export function ClinicianBios({ brand }: { brand: BrandConfig }) {
     <section className="section" aria-label="Our clinicians">
       <div className="container">
         <SectionHeading eyebrow="Care team" title="Meet the clinicians" />
-        <PlaceholderNote>
-          real, named, verifiable clinician identity is the leapfrog — fill these slots
-        </PlaceholderNote>
+        {!brand.contentReviewed ? (
+          <PlaceholderNote>
+            real, named, verifiable clinician identity is the leapfrog — fill these slots
+          </PlaceholderNote>
+        ) : null}
         <div className="grid grid--2" style={{ marginTop: 12 }}>
           {brand.clinicians.map((c, i) => (
             <div

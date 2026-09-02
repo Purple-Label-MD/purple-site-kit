@@ -11,6 +11,7 @@
 import { apiBase, apiKey, brandId, isMockMode } from "@/lib/config";
 import * as mock from "@/lib/purple/mock/edge";
 import type { ResolveParams } from "@/lib/purple/mock/edge";
+import { composeResolveRequest } from "@/lib/purple/resolve-request.mjs";
 import type {
   AddressSuggestion,
   AnswerValue,
@@ -63,12 +64,12 @@ export class PurpleApiError extends Error {
 
 export async function resolveInstrument(params: ResolveParams): Promise<InstrumentStep> {
   if (isMockMode()) return mock.mockResolve(params);
-  const qs = new URLSearchParams(
-    Object.entries(params).filter(([, v]) => v != null) as [string, string][],
-  );
-  const res = await fetch(`${apiBase()}/instrument/resolve?${qs}`, {
+  // The live gateway resumes an enrollment ONLY from the `X-Journey-Id` request header; a
+  // `journey_id` query parameter is ignored and silently mints a brand-new journey.
+  const { query, headers } = composeResolveRequest(params);
+  const res = await fetch(`${apiBase()}/instrument/resolve?${query}`, {
     method: "GET",
-    headers: authHeaders(),
+    headers: authHeaders(headers),
     cache: "no-store",
   });
   return parse<InstrumentStep>(res);

@@ -1,4 +1,6 @@
 import { IntakeRenderer } from "@/components/intake/IntakeRenderer";
+import { getActiveBrand } from "@/lib/brand";
+import { entryPhaseFor } from "@/lib/purple/resolve-request.mjs";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
@@ -18,10 +20,15 @@ export default async function StartPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
+  const brand = getActiveBrand();
   const usp = new URLSearchParams();
   for (const [k, v] of Object.entries(sp)) {
     if (typeof v === "string") usp.set(k, v);
   }
+  // Pay-first brands (welcome-pack checkout mode) serve the qualification layer first and
+  // hand off to the hosted checkout; the clinical layer is served after payment.
+  const phase = entryPhaseFor(brand.checkoutMode, usp.get("phase"));
+  if (phase) usp.set("phase", phase);
   const qs = usp.toString();
   const initialQuery = qs ? `?${qs}` : "";
 
@@ -31,7 +38,10 @@ export default async function StartPage({
   // does not decide.
   return (
     <div className="pl-app">
-      <IntakeRenderer initialQuery={initialQuery} />
+      <IntakeRenderer
+        initialQuery={initialQuery}
+        completeHeadline={brand.copy.intake_complete_headline}
+      />
     </div>
   );
 }

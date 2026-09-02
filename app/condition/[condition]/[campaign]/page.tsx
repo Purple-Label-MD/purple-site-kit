@@ -53,10 +53,12 @@ export default async function CampaignLander({
           <p className="muted" style={{ maxWidth: 620, fontSize: 18 }}>
             {c.heroSub}
           </p>
-          <PlaceholderNote>
-            nav strip is {brand.navStripOnCampaign ? "ON" : "OFF"} for this brand — a template
-            toggle
-          </PlaceholderNote>
+          {!brand.contentReviewed ? (
+            <PlaceholderNote>
+              nav strip is {brand.navStripOnCampaign ? "ON" : "OFF"} for this brand — a template
+              toggle
+            </PlaceholderNote>
+          ) : null}
           <div style={{ marginTop: 14 }}>
             <a className="btn" href={cta}>
               {brand.copy.cta_primary}

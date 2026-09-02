@@ -63,7 +63,14 @@ function seedDraft(node?: RenderedNode | null): Draft {
 
 type Visited = { step: InstrumentStep; draft: Draft };
 
-export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
+export function IntakeRenderer({
+  initialQuery,
+  completeHeadline,
+}: {
+  initialQuery: string;
+  /** Brand copy for the completion screen (`copy.intake_complete_headline`). */
+  completeHeadline?: string;
+}) {
   const [visited, setVisited] = useState<Visited[]>([]);
   const [pos, setPos] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -277,7 +284,7 @@ export function IntakeRenderer({ initialQuery }: { initialQuery: string }) {
       <main className="pl-stage">
         <div className="pl-node" key={`${step.session_id}-${pos}`} aria-live="polite">
           {complete ? (
-            <CompleteView step={step} offering={offeringRef} />
+            <CompleteView step={step} offering={offeringRef} completeHeadline={completeHeadline} />
           ) : abandoned ? (
             <>
               <div className="pl-node-anim">
@@ -783,13 +790,22 @@ function FileControl({
   );
 }
 
-function CompleteView({ step, offering }: { step: InstrumentStep; offering?: string }) {
+function CompleteView({
+  step,
+  offering,
+  completeHeadline = "Your answers are in",
+}: {
+  step: InstrumentStep;
+  offering?: string;
+  /** Brand-overridable copy slot (`copy.intake_complete_headline`); never placeholder text live. */
+  completeHeadline?: string;
+}) {
   const checkoutHref = `/checkout?journey_id=${encodeURIComponent(step.journey_id)}${
     offering ? `&offering=${encodeURIComponent(offering)}` : ""
   }`;
   return (
     <>
-      <h1 className="pl-headline">Intake complete (placeholder)</h1>
+      <h1 className="pl-headline">{completeHeadline}</h1>
       <p className="pl-why">
         The server marked this session complete. Session <code>{step.session_id}</code>, enrollment{" "}
         <code>{step.journey_id}</code>.

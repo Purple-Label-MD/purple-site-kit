@@ -46,9 +46,11 @@ export default async function ConditionPage({
           <p className="muted" style={{ maxWidth: 620, fontSize: 18 }}>
             {c.heroSub}
           </p>
-          <PlaceholderNote>
-            evergreen education copy — replace with counsel-reviewed content
-          </PlaceholderNote>
+          {!brand.contentReviewed ? (
+            <PlaceholderNote>
+              evergreen education copy — replace with counsel-reviewed content
+            </PlaceholderNote>
+          ) : null}
           <div style={{ marginTop: 14 }}>
             <a className="btn" href={entryLink()}>
               {brand.copy.cta_primary}

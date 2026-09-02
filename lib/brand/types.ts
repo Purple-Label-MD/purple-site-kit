@@ -149,6 +149,13 @@ export interface BrandConfig {
   /** Archetype this brand drives (default "launch" when omitted). */
   archetype?: Archetype;
   /**
+   * The brand's checkout entry mode from the Purple welcome pack — never inferred.
+   * `pay-first` (clinical_after_pay): the intake host serves the QUALIFICATION layer only
+   * (`phase=qualification`) and hands off to checkout; the clinical layer runs after payment.
+   * `questionnaire-first` (default): the whole instrument runs before checkout.
+   */
+  checkoutMode?: "pay-first" | "questionnaire-first";
+  /**
    * GROWTH growth-layer (WI-042). Present only for archetype "growth": the audience
    * lenses, the single projected catalog, and the default funnel-entry toggle.
    * A fork swaps the catalog config; the token SHAPE never changes.

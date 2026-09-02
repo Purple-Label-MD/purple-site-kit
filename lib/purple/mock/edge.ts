@@ -84,6 +84,9 @@ export interface ResolveParams {
   promo?: string;
   redirect?: string;
   test?: string;
+  /** `qualification` | `clinical` — which layer of the instrument to serve (pay-first brands
+   *  run the qualification layer first and the clinical layer after payment). */
+  phase?: string;
 }
 
 /** GET /instrument/resolve — mint (or resume) a session and return the first node. */
