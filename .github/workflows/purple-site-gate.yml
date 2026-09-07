@@ -1,0 +1,200 @@
+name: purple-site-gate
+
+# THE SHARED SITE GATE (WI-387 / P5 · SITE-GATE 2026-09-06).
+#
+# Caller repos (site-* clones) declare `uses: Purple-Label-MD/purple-site-kit/
+# .github/workflows/purple-site-gate.yml@main` and nothing else — they declare
+# THAT they are gated, never WHAT the gate checks.
+#
+# WHY THIS FILE EXISTS AT ALL: the caller shipped on 2026-09-03 and this file
+# did not. Seventeen runs, every one dead in 0 seconds with a workflow-file
+# error, every one reported as "failure". No PR into site-fortifyhp was ever
+# gated — including PR #5, whose own message read "tsc clean · 13/13" and which
+# shipped `p.months` on an unbound `p`: a ReferenceError that crashed all 50
+# product detail pages. An absent gate wearing a gate's name is worse than a
+# noisy one, because it trains the room to read red as background.
+#
+# THE ANTI-VACUITY LAW (this is the point of the file, not decoration):
+# `tsc --noEmit` against a SOLUTION tsconfig — `"files": []` + `"references"` —
+# type-checks ZERO files and exits 0. That is what made "tsc clean" meaningless
+# in PR #5. So this gate:
+#   1. expands `references` through tsc's OWN parser and checks each real
+#      project, never the solution stub; and
+#   2. counts the project files each check actually loaded and FAILS CLOSED at
+#      zero — a check that checked nothing is a failure, not a pass.
+# Every step below is required. Nothing here is `continue-on-error`, and
+# nothing is `--if-present`: a missing lockfile, a missing typechecker, or a
+# missing test script is an ungated repo, and this gate says so out loud.
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node major version for the gate run.
+        type: string
+        required: false
+        default: "20"
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node ${{ inputs.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+
+      # --- fail closed on the preconditions, loudly -------------------------
+      - name: Preflight (lockfile · typescript · test script)
+        run: |
+          set -euo pipefail
+          fail=0
+
+          if [ ! -f package.json ]; then
+            echo "::error::purple-site-gate: no package.json at the repo root."
+            exit 1
+          fi
+
+          if [ ! -f package-lock.json ]; then
+            echo "::error::purple-site-gate: no package-lock.json — \`npm ci\` needs one. A site clone without a committed lockfile cannot be reproducibly gated."
+            fail=1
+          fi
+
+          if [ ! -f tsconfig.json ]; then
+            echo "::error::purple-site-gate: no tsconfig.json at the repo root — this gate's whole job is a typecheck that is not vacuous."
+            fail=1
+          fi
+
+          if ! node -e 'const s=(require("./package.json").scripts)||{}; process.exit(s.test?0:1)'; then
+            echo "::error::purple-site-gate: package.json declares no \"test\" script. A repo with no test suite is UNGATED; this gate will not pretend otherwise. Add a \"test\" script (e.g. \"vitest run\")."
+            fail=1
+          fi
+
+          if ! node -e 'const s=(require("./package.json").scripts)||{}; process.exit(s.build?0:1)'; then
+            echo "::error::purple-site-gate: package.json declares no \"build\" script."
+            fail=1
+          fi
+
+          exit "$fail"
+
+      - name: Install (npm ci)
+        run: npm ci
+
+      # --- the step PR #5 needed and did not have --------------------------
+      - name: Typecheck (references expanded · zero-file check fails closed)
+        run: |
+          set -euo pipefail
+
+          TSC=./node_modules/.bin/tsc
+          if [ ! -x "$TSC" ]; then
+            echo "::error::purple-site-gate: typescript is not installed in this repo (no ./node_modules/.bin/tsc after npm ci). Add typescript as a devDependency."
+            exit 1
+          fi
+
+          echo "typescript: $("$TSC" --version)"
+
+          mkdir -p .purple-gate
+
+          # COUNT ONLY REAL PROJECT FILES.
+          # `tsc` writes DIAGNOSTICS TO STDOUT, so a `--listFilesOnly` run that
+          # errors (TS18002/TS18003 — "the files list is empty" / "no inputs
+          # were found") leaves an error line in the same stream as the file
+          # list. Counting lines would score that line as a file and defeat the
+          # zero-file guard on the exact input the guard exists for. So: keep
+          # only absolute paths that are real files, outside node_modules.
+          count_project_files() {
+            _n=0
+            while IFS= read -r _f; do
+              case "$_f" in
+                /*/node_modules/*) ;;
+                /*) if [ -f "$_f" ]; then _n=$(( _n + 1 )); fi ;;
+              esac
+            done < "$1"
+            echo "$_n"
+          }
+
+          # Resolve the project list through tsc's own JSONC-aware parser, so a
+          # comment in tsconfig.json can never silently change what is checked.
+          # tsc prints diagnostics on STDOUT and exits non-zero here for a root
+          # config it cannot use at all; without this arm `set -e` would kill the
+          # step with an empty log, which is a silent gate — the thing being cured.
+          if ! "$TSC" --showConfig -p tsconfig.json > .purple-gate/root.showconfig.json 2>&1 \
+             || ! jq -e . .purple-gate/root.showconfig.json > /dev/null 2>&1; then
+            echo "::error::purple-site-gate: \`tsc --showConfig -p tsconfig.json\` produced no usable config — the root tsconfig is not something tsc can typecheck. tsc said:"
+            sed 's/^/  /' .purple-gate/root.showconfig.json
+            exit 1
+          fi
+
+          # No arrays and no `mapfile` on purpose: this script must be runnable
+          # verbatim on a plain POSIX-ish bash (3.2 included) so the zero-file
+          # guard below can be EXERCISED off-runner. A guard nobody has ever
+          # seen fire is the same species of nothing this gate exists to end.
+          PROJECTS=$(jq -r '.references[]?.path // empty' .purple-gate/root.showconfig.json)
+          nproj=$(printf '%s\n' "$PROJECTS" | grep -c . || true)
+
+          # RECEIPT — how vacuous the naive form would have been. This is the
+          # exact number that made "tsc --noEmit" a no-op in PR #5.
+          "$TSC" -p tsconfig.json --noEmit --listFilesOnly > .purple-gate/root.files.txt 2>/dev/null || true
+          root_own=$(count_project_files .purple-gate/root.files.txt)
+          echo "receipt: \`tsc --noEmit -p tsconfig.json\` alone would have checked ${root_own} project file(s)."
+
+          if [ "$nproj" -eq 0 ]; then
+            # Not a solution tsconfig — check the root project itself.
+            PROJECTS="tsconfig.json"
+            nproj=1
+            echo "tsconfig.json is a leaf project; checking it directly."
+          else
+            echo "tsconfig.json is a SOLUTION project (${nproj} reference(s)); the solution stub itself is never the check."
+          fi
+
+          total=0
+          while IFS= read -r proj; do
+            if [ -n "$proj" ]; then
+              if [ ! -f "$proj" ]; then
+                echo "::error::purple-site-gate: referenced project '$proj' does not exist."
+                exit 1
+              fi
+
+              safe=$(echo "$proj" | tr '/.' '__')
+              "$TSC" -p "$proj" --noEmit --listFilesOnly > ".purple-gate/${safe}.files.txt" 2>/dev/null || true
+              n=$(count_project_files ".purple-gate/${safe}.files.txt")
+              echo "project ${proj}: ${n} project file(s) in program"
+
+              if [ "$n" -eq 0 ]; then
+                echo "::error::purple-site-gate: project '$proj' loads ZERO project files. A typecheck that checks nothing exits 0 and proves nothing — that is the defect this gate exists to prevent, not a pass."
+                exit 1
+              fi
+
+              total=$(( total + n ))
+            fi
+          done <<< "$PROJECTS"
+
+          echo "typecheck: ${total} project file(s) across ${nproj} project(s) — running the real check."
+
+          rc=0
+          while IFS= read -r proj; do
+            if [ -n "$proj" ]; then
+              echo "::group::tsc --noEmit -p ${proj}"
+              "$TSC" -p "$proj" --noEmit || rc=1
+              echo "::endgroup::"
+            fi
+          done <<< "$PROJECTS"
+
+          rm -rf .purple-gate
+          exit "$rc"
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
