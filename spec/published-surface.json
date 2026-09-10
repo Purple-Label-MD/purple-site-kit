@@ -1,0 +1,181 @@
+{
+  "source": "https://docs.purplelabelmd.com/openapi/public-openapi.json",
+  "specSha256": "66a9897fd82d39b792dc04c473592374c7d4971913aa85c91dbaec92ee9461a5",
+  "serverUrl": "https://api.dev.purplelabelmd.com",
+  "versionPrefix": "/v1",
+  "opCount": 43,
+  "ops": [
+    {
+      "method": "GET",
+      "path": "/v1/account/brands/{brand_id}/config"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/account/brands/{brand_id}/config"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/account/brands/{brand_id}/domains"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/account/brands/{brand_id}/domains/{kind}"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/account/brands/{brand_id}/domains/{kind}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/account/brands/{brand_id}/domains/{kind}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/account/brands/{brand_id}/domains/{kind}/verify"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/account/brands/{brand_id}/offerings"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/account/brands/{brand_id}/pricing"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/account/brands/{brand_id}/starter-merchandising"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/account/offerings/{offering_ref}/qualification"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/account/offerings/{offering_ref}/qualification"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/account/offerings/{offering_ref}/qualification/order"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/account/offerings/{offering_ref}/qualification/publish"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/account/offerings/{offering_ref}/qualification/questions/{question_id}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/account/offerings/{offering_ref}/qualification/questions/{question_id}"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/account/offerings/{ref}/merchandising"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/account/orders"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/account/orders/{order_ref}"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/account/question-library/facts"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/account/question-library/minted-facts"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/account/question-library/questions"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/account/question-library/questions"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/account/question-library/questions/{question_id}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/account/question-library/questions/{question_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/auth/callback"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/auth/login"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/auth/logout"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/instrument/abandon"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/instrument/address/suggest"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/instrument/next"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/instrument/resolve"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/journeys/{journey_id}/status"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/onboardings/{onboarding_id}/progress"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/checkout-sessions"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/{order_ref}/status"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/webhooks/event-types"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/webhooks/registrations"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/webhooks/registrations"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/webhooks/registrations/{registration_id}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/webhooks/registrations/{registration_id}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/webhooks/registrations/{registration_id}"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/webhooks/registrations/{registration_id}/test"
+    }
+  ]
+}

@@ -3,15 +3,30 @@ name: CI
 # Governance-lite ① — this repo's OWN law (no six-gate apparatus here):
 #   build + lint + fail-closed copy-guard (proven RED-first) + link check
 #   + per-page-meta check (proven RED-first) + INTAKE-SKIN-01 parity suite
-#   (spec §7: logic unit tests + browser suite on both LAUNCH demo brands).
+#   (spec §7: logic unit tests + browser suite on both LAUNCH demo brands)
+#   + the SPEC-CONTRACT instrument (WI-374 leg B).
 #   Combined with founder-merge (governance-lite ②: bot-authored PRs, Gregg
 #   merges, enforced by branch protection) this is the whole gate for the kit.
+#
+# WI-374 leg B — the projection instrument. Until it landed, every step in this
+# file was SELF-REFERENTIAL: not one of them compared this kit to the platform it
+# integrates with. That is how a called path the spec does not publish, a base-URL
+# convention documented two ways, and three vocabularies for one entry mode all
+# survived four integrator walks. `spec:contract` closes that by projecting the
+# published API surface onto this repo's code and docs, fail-closed; `spec:heartbeat`
+# closes the OTHER failure — a gate that quietly stops ruling — by refusing to pass
+# when no live verification has concluded inside the freshness window.
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
+  # the jam detector reads THIS repo's own workflow-run history; nothing else needs it
+  actions: read
 
 jobs:
   verify:
@@ -48,6 +63,32 @@ jobs:
       # missing / default / duplicate meta must all fire.
       - name: Meta-check self-test (RED-first + green)
         run: npm run meta-check:test
+
+      # RED-first proof of the spec-anchored instrument: a planted dead call path and a
+      # planted doubled base must BOTH fail, the register must red on an expired or a
+      # stale entry, a census below its floor must read as JAMMED rather than as a pass,
+      # and LIVE-FETCH-FAILED must stay distinct from SURFACE-DRIFT. A check that has only
+      # ever been green proves nothing.
+      - name: Spec-contract self-test (RED-first + green)
+        run: npm run spec:contract:test
+
+      # The instrument itself, against the pinned published surface. Fail-closed.
+      #
+      # `spec:contract:ci` passes --allow-open-gaps, which accepts the OPEN-GAPS verdict (exit 3)
+      # for the findings registered in known-gaps.json. The BARE `npm run spec:contract` is STRICT
+      # and exits non-zero on those — that is the form a downstream conformance gate must use, so
+      # that "green in kit CI" can never be mistaken for "the kit conforms to the published spec".
+      - name: Spec-contract (spec-anchored, fail-closed)
+        run: npm run spec:contract:ci
+
+      # THE JAM DETECTOR. A fail-closed gate that stops ruling is a silent lie — the
+      # platform's own docs-projection sat red on main for days with publishing frozen and
+      # nothing said so. This step refuses to pass when no live verification has concluded
+      # inside the freshness window declared in integration-contract.json.
+      - name: Spec-contract jam detector (live verification must be fresh)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: npm run spec:heartbeat
 
       - name: Copy-guard scan (fail-closed)
         run: npm run copy-guard
