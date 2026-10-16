@@ -59,9 +59,10 @@ export default async function MockCheckoutPage({
               <p className="muted">
                 This deployment completes your health questions before payment, and this link
                 carries no enrollment — start with your health questions and you&rsquo;ll come back
-                here with everything attached. (This is the honest lock state the real hosted
-                checkout renders for a buy-first entry with no `sku_id`/`therapy` — see the WI-084
-                exit report for why the kit cannot supply those today.)
+                here with everything attached. (This mirrors the lock a questions-first
+                brand&rsquo;s hosted checkout renders for a link with no enrollment; a
+                checkout-first brand&rsquo;s hosted checkout instead needs `sku_id` and `therapy`
+                from the welcome kit on the link.)
               </p>
               {intakeNext ? (
                 <a className="btn" href={intakeNext}>

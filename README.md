@@ -41,6 +41,7 @@ Copy `.env.example` to `.env.local` and fill it in (never commit it):
 | `NEXT_PUBLIC_PURPLE_API_BASE` | The projected public gateway base **including `/v1`**. Setting it turns off mock mode. |
 | `NEXT_PUBLIC_PURPLE_BRAND_ID` | Your brand id (`brd_…`) — selects the brand config and rides as `X-Brand-Id`. |
 | `NEXT_PUBLIC_PURPLE_OFFERING_REF` | A stable offering ref preselected on entry links. |
+| `NEXT_PUBLIC_PURPLE_SKU_ID` / `NEXT_PUBLIC_PURPLE_THERAPY` | Checkout-first (`clinical_after_pay`) brands: the default offering's `sku_id` + `therapy` from its checkout-first link in your welcome kit. Forwarded on the checkout handoff only with the default offering ref. |
 | `PURPLE_MEMBER_PORTAL_BASE` | The platform-hosted checkout's **origin** (no `/v1`, no path). Server-only. Unset ⇒ the checkout handoff targets an in-kit mock simulation instead. |
 | `PURPLE_API_KEY` | Server-only per-client M2M key (`Authorization: Bearer …`). Never exposed to the browser. |
 | `PURPLE_WEBHOOK_SECRET` | Server-only HMAC secret for verifying inbound webhook signatures. |
@@ -57,7 +58,7 @@ are marked honestly so you know they belong to the rest of your integration.
 | **API key** | `PURPLE_API_KEY` | This exact name — the kit reads `PURPLE_API_KEY`, not `PURPLE_CLIENT_API_KEY` or any other spelling. Presented server-side as `Authorization: Bearer …` on every live call (`lib/purple/client.ts`); never `NEXT_PUBLIC_`-prefixed, never reaches the browser. |
 | **Offering ref(s)** | `NEXT_PUBLIC_PURPLE_OFFERING_REF` | Set one ref as the default: the entry-link composer (`lib/purple/entry-links.ts`) preselects it on intake entry links, and the checkout handoff forwards it as `offering_ref`. Got several refs? Keep the rest in your brand/catalog config (`lib/brand/`, `lib/catalog/`) and pass one per link via `EntryContext.offering`. |
 | **Member-portal origin** | `PURPLE_MEMBER_PORTAL_BASE` | The platform-hosted checkout's **origin** (no `/v1`, no path — the opposite convention from the API base). The `/checkout` handoff link is composed against it; leave it unset to keep the credential-free mock-checkout walk. |
-| **Checkout entry mode** | — *not read by the kit* | Provided for your integration, not read by the kit. It tells you how the hosted checkout sequences payment vs. clinical review for your brand. Kit-side, pick the matching funnel entry in your brand config (`funnelMode: "quiz-first"` or `"buy-first"` on a GROWTH brand); the handoff composer (`lib/purple/checkout-links.mjs`) supports journey-bound and offering-only entry either way. |
+| **Checkout entry mode** | — *not read by the kit* | Provided for your integration, not read by the kit. It tells you how the hosted checkout sequences payment vs. clinical review for your brand. Kit-side, pick the matching funnel entry in your brand config (`funnelMode: "quiz-first"` or `"buy-first"` on a GROWTH brand); the handoff composer (`lib/purple/checkout-links.mjs`) supports journey-bound and offering-only entry either way. A **checkout-first** (`clinical_after_pay`) brand's handoff must also carry the offering's `sku_id` + `therapy` from its checkout-first link in your welcome kit (on the `/checkout` link, or `NEXT_PUBLIC_PURPLE_SKU_ID` / `NEXT_PUBLIC_PURPLE_THERAPY` for the default offering) — without both the hosted checkout refuses the link as incomplete. |
 | **`{{CLIENT_DOMAIN}}` placeholder** | — *not read by the kit* | Provided for your integration, not read by the kit. Wherever a pack value carries `{{CLIENT_DOMAIN}}`, substitute the domain this fork actually deploys on (e.g. redirect/return URLs, the webhook endpoint URL you register). |
 
 Two variables the pack does **not** carry, because they are your fork's own choices:
@@ -153,9 +154,11 @@ four capability deltas, all driven by **one catalog config** (`lib/catalog/`):
 2. **Entry-mode toggle** (`quiz-first | buy-first`) per brand, with a per-campaign
    `?mode=` override. **Buy-first requires** the eligibility-honesty block beside every
    buy control ("a licensed clinician reviews every order; not qualified = automatic full
-   refund") and routes to the checkout **handoff** — offering-only, since no journey
-   exists yet; the hosted door renders its own honest lock state if it needs health
-   questions first — with a direct link onward to the intake renderer either way.
+   refund") and routes to the checkout **handoff** — no journey exists yet, so it carries
+   the offering (plus `sku_id` + `therapy` when the offering is the configured default;
+   a checkout-first brand's hosted checkout refuses the link without them, and a
+   questions-first brand's hosted door renders its own health-questions lock) — with a
+   direct link onward to the intake renderer either way.
 3. **Supply-term selector** — a default-expanded, config-driven term ladder
    (`offering.supplyTerms`); the merchandising surface, not a post-click reveal.
 4. **Labs product line** — marketing-complete, **fulfillment-stubbed**: gendered panel
