@@ -51,6 +51,22 @@ export function defaultOfferingRef(): string | undefined {
   return process.env.NEXT_PUBLIC_PURPLE_OFFERING_REF?.trim() || undefined;
 }
 
+/**
+ * The default offering's checkout-first product context (`sku_id` / `therapy`),
+ * copied from that offering's checkout-first link in the welcome kit. A
+ * checkout-first (`clinical_after_pay`) brand's hosted checkout refuses a link
+ * without both. Only applied when the checkout resolves to the DEFAULT offering
+ * ref above (see `resolveCheckoutHandoffContext`) — never paired with another ref.
+ */
+export function defaultSkuId(): string | undefined {
+  return process.env.NEXT_PUBLIC_PURPLE_SKU_ID?.trim() || undefined;
+}
+
+/** See `defaultSkuId()` — the matching `therapy` for the default offering. */
+export function defaultTherapy(): string | undefined {
+  return process.env.NEXT_PUBLIC_PURPLE_THERAPY?.trim() || undefined;
+}
+
 /** Server-only: per-client M2M API key. Never exposed to the browser. */
 export function apiKey(): string | undefined {
   return process.env.PURPLE_API_KEY?.trim() || undefined;

@@ -44,6 +44,12 @@ jobs:
       - name: Catalog projection self-test
         run: npm run catalog:test
 
+      # Checkout handoff composer: a checkout-first link forwards offering_ref +
+      # sku_id + therapy; a missing one is never invented or borrowed from
+      # another offering. (Was in `npm run verify` but not in CI.)
+      - name: Checkout-links self-test
+        run: npm run checkout-links:test
+
       # RED-first proof of the per-page-meta law (the addendum §4① failure mode):
       # missing / default / duplicate meta must all fire.
       - name: Meta-check self-test (RED-first + green)

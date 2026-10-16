@@ -33,6 +33,10 @@ From `.env.example` → `.env.local` (git-ignored; verify before writing values)
   build/deploy time AND rides as `X-Brand-Id` on tenant-scoped calls.
 - `NEXT_PUBLIC_PURPLE_OFFERING_REF` — the offering preselected on entry links. Always a stable
   ref from the brand's ASSIGNED catalog — never a free-text product name.
+- `NEXT_PUBLIC_PURPLE_SKU_ID` / `NEXT_PUBLIC_PURPLE_THERAPY` — checkout-first
+  (`clinical_after_pay`) brands only: the DEFAULT offering's `sku_id` and `therapy`, copied from
+  its checkout-first link in the welcome kit. Applied only when the checkout resolves to the
+  default offering; a `/checkout` link carrying its own `sku_id`/`therapy` wins.
 - `PURPLE_API_KEY` — server-only M2M key (`Authorization: Bearer …`). SECRET. Never
   `NEXT_PUBLIC_`-prefixed, never committed, never logged, never in chat. (Platform stores only
   its digest — lost keys are re-minted, never recovered.)
@@ -79,10 +83,15 @@ are **platform truth, per brand** — assigned in the Purple admin console, serv
 - **The checkout surface** — its anatomy is the platform's commerce-door standard, hosted on the
   member origin (`PURPLE_MEMBER_PORTAL_BASE`), never in this kit. As of WI-084, `/checkout`
   **composes a handoff link** — it carries `offering_ref` always, plus `journey_id` for the
-  primary post-intake entry (the intake renderer's completion step) or, for a buy-first entry
-  with no journey yet, `offering_ref` alone — the hosted door itself renders the honest lock
-  state if it needs health questions first. Never add a payment field, never fabricate a
-  `sku_id`/`therapy` value the kit wasn't given, never build a payment path around the door.
+  primary post-intake entry (the intake renderer's completion step). A checkout-first
+  (`clinical_after_pay`) handoff must carry `offering_ref` + `sku_id` + `therapy`, copied from
+  the offering's checkout-first link in your welcome kit — on the `/checkout` link
+  (`?offering=…&sku_id=…&therapy=…`) or as `NEXT_PUBLIC_PURPLE_SKU_ID` /
+  `NEXT_PUBLIC_PURPLE_THERAPY` beside the default offering; without both, the hosted checkout
+  refuses the link as incomplete. A questions-first brand's hosted door instead renders its own
+  "start with your health questions" lock. Never add a payment field, never fabricate a
+  `sku_id`/`therapy` value the kit wasn't given (nor pair one offering's with another's ref),
+  never build a payment path around the door.
   Forks from v0.1.0-era tags instead ship the pre-wake checkout STUB — upgrade the tag to get
   the handoff. **Known limitation:** the kit's status page shows journey status only — there is
   no public order-read op or commerce webhook family on the platform yet, so order/payment truth
@@ -149,7 +158,7 @@ structure, a guard, legal, clinical, or claims — route it.**
 | Placeholder copy renders | a marked slot unfilled | brand config |
 | "This checkout link isn't complete" | no `offering_ref` resolvable (no entry param, no configured default) | entry link / `NEXT_PUBLIC_PURPLE_OFFERING_REF` |
 | Checkout hands off to the mock simulation in live mode | `PURPLE_MEMBER_PORTAL_BASE` unset | kit env |
-| Hosted checkout asks for health questions on a buy-first link | expected — no `sku_id`/`therapy` source exists yet; this is the honest lock state, not a bug | platform (no public fix side today) |
+| Hosted checkout says "This buy link is incomplete (missing its product context)" | a checkout-first (`clinical_after_pay`) link without `sku_id` and `therapy` — copy both from the offering's checkout-first link in your welcome kit; a questions-first brand instead shows the "start with your health questions" lock | entry link / brand config |
 
 ## Handoff evidence
 
